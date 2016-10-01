@@ -1,0 +1,61 @@
+Spark SQL 实战
+在$SPARK_HOME/conf下复制一个hive-size.conf,并添加一下配置
+    <property>
+		<name>hive.metastore.uris</name>
+		<value>thrift://hadoop:9083</value>
+		<description>Thrift URI for the remote metastore. Used by metastore client to connect to remote metastore.</description>
+	</property>
+
+    先启动$HADOOP_HOME/sbin/start-all.sh
+    启动hive的service
+        sudo service mysqld start
+        $HIVE_HOME/bin/hive --service metastore &
+        或者hive –service metastore >metastore.log 2>& 1&
+    启动spark然后,启动一个spark-shell
+
+------------------------------------------------------------------
+操作如下:
+val hiveContext = new org.apache.spark.sql.hive.HiveContext(sc)
+hiveContext.sql("use hive")
+//返回一个DataFrame
+hiveContext.sql("show tables").collect.foreach(println)
+hiveContext.sql("select count(*) from sogouQ1").collect.foreach(println)
+必须放到Driver上才行。
+hiveContext.sql("select count(*) from sogouQ3 where WEBSITE like '%baidu%'").collect.foreach(println)
+hiveContext.sql("select count(*) from sogouQ3 where WEBSITE like '%baidu%' and S_SEQ=1 and C_SEQ=1").collect.foreach(println)
+正常的情况下，比Hive SQL快20倍。
+
+-------------------------------------------------------------------
+参考官方doc练习,启动Spark集群
+val sc: SparkContext // An existing SparkContext.
+val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+val df = sqlContext.read.json("examples/src/main/resources/people.json")
+// Displays the content of the DataFrame to stdout
+df.show()
+df.printSchema()
+df.select("name").show()
+df.select(df("name"), df("age") + 1).show()
+df.filter(df("age") > 21).show()
+df.groupBy("age").count().show()
+
+sqlContext
+hiveContext
+说明可以创建很多hiveContext，hiveContext连的是数据仓库，作为程序本身，
+例如Spark中的Job可以并行运行，所以可以有多个hiveContext实例。查询数据级别有多个实例很正常。
+val df = sqlContext.read.josn(“/library/examples/src/main/resources/people.json”)
+把数据读取进来，知道数据的基本信息，json数据是key-value级别。
+
+
+使用Java编写DataFrame   See:main/java/spark/sql/DataFrameOps.java
+使用Scala编写DataFrame  See:main/scala/spark/sql/DataFrameOpsScala.java
+
+maven 打包参考http://www.cnblogs.com/yjmyzz/p/4694219.html
+
+
+
+
+
+
+
+
+

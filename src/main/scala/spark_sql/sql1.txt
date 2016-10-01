@@ -1,0 +1,46 @@
+Spark SQL和DataFrame的本质
+    Spark SQL和DataFrame（DataSet，还没有深度去使用）
+    DataFrame与RDD
+    企业级最佳实践
+
+一：Spark SQL和DataFrame
+
+    1.Spark SQL是除了Spark Core以外最大的和最受关注的组件。
+        a)可以处理各种存储介质和各种格式的数据；
+            用户可以扩展Spark SQL的功能来支持更多类型的数据（例如Kudu）。
+        b)Spark SQL把数据仓库的计算能力推向了新的高度。
+        不仅是无敌的计算速度（尤其是在Tungsten成熟以后会更加无可匹敌，
+            Spark SQL比shark快至少一个数量级,而Shark比Hive快至少一个数量级);
+        更为重要的是把数据仓库的计算复杂度推向了历史上全新的高度
+            (Spark SQL后续推出的DataFrame可以让数据仓库直接使用机器学习、
+            图计算等复杂的算法库来对数据仓库进行复杂深度数据价值的挖掘);
+        c)Spark SQL（DataFrame、DataSet）不仅是数据仓库的引擎,而且也是数据挖掘的引擎,
+            更为重要的是Spark SQL是数据科学计算和分析引擎！！！
+        d)后来的DataFrame让Spark（SQL）一举成为大数据计算引擎的技术实现霸主（尤其是在Tungsten的强力支持下）！
+        e)Hive+Spark SQL+DataFrame，过去绝大部分公司都是这个解决方案。
+            i：Hive负责廉价的数据仓库存储
+            ii：Spark SQL负责高速的计算
+            iii：DataFrame负责复杂的数据挖掘（DataFrame是一个新的API，不是Spark SQL）
+
+二：DataFrame和RDD
+    1,R和Python中都有DataFrame，Spark中的DataFrame从形式上看最大的不同点是其天生是分布式的；
+    你可以简单的认为Spark中的DataFrame是一个分布式的Table。
+    如:DataFrame:
+        Name(String)Age(Int)Tel(Long)
+    而RDD:
+        Person
+    RDD和DataFrame的根本差异：
+        a)RDD是以Record为单位的，Spark在优化的时候无法洞悉Record内部的细节，
+        所以也就无法进行更深度的优化，这极大的限制了Spark SQL性能的提升！
+        b)DataFrame包含了每个Record的MetaData信息，
+        也就是说DataFrame的优化时基于列内部的优化，而不是像RDD一样只能够基于行进行优化。
+
+三：Spark SQL企业级最佳实践
+    1,第一阶段，最初的代码+文件系统是最简单的数据处理模型,C代码处理。
+    2,第二阶段，JavaEE+数据库，数据库不能进行分布式计算。
+    3,第三阶段，移动互联网爆发，Hive。速度慢。
+    4,第四阶段，2014年下半年尤其明显。SparkSQL+Hive。
+    5,第五阶段，SparkSQL+Hive +DataFrame。
+    6,第六阶段，SparkSQL+Hive +DataFrame +DataSet(未来).
+领先的处在第五个阶段，大部分处在第三个和第四个阶段。
+
