@@ -10,7 +10,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src/main/scala" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
-    <orderEntry type="jdk" jdkName="1.7" jdkType="JavaSDK" />
+    <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="scala-sdk-2.10.4" level="application" />
     <orderEntry type="library" name="Maven: org.apache.spark:spark-core_2.10:1.6.1" level="project" />
@@ -174,13 +174,8 @@
     <orderEntry type="library" name="Maven: org.apache.hadoop:hadoop-yarn-api:2.7.2" level="project" />
     <orderEntry type="library" name="Maven: org.apache.hadoop:hadoop-mapreduce-client-core:2.7.2" level="project" />
     <orderEntry type="library" name="Maven: org.apache.hadoop:hadoop-yarn-common:2.7.2" level="project" />
-    <orderEntry type="library" name="Maven: javax.xml.bind:jaxb-api:2.2.2" level="project" />
-    <orderEntry type="library" name="Maven: javax.xml.stream:stax-api:1.0-2" level="project" />
-    <orderEntry type="library" name="Maven: javax.activation:activation:1.1" level="project" />
     <orderEntry type="library" name="Maven: javax.servlet:servlet-api:2.5" level="project" />
     <orderEntry type="library" name="Maven: com.sun.jersey:jersey-client:1.9" level="project" />
-    <orderEntry type="library" name="Maven: org.codehaus.jackson:jackson-jaxrs:1.9.13" level="project" />
-    <orderEntry type="library" name="Maven: org.codehaus.jackson:jackson-xc:1.9.13" level="project" />
     <orderEntry type="library" name="Maven: org.apache.hadoop:hadoop-mapreduce-client-jobclient:2.7.2" level="project" />
     <orderEntry type="library" name="Maven: org.apache.hadoop:hadoop-annotations:2.7.2" level="project" />
     <orderEntry type="library" name="Maven: org.apache.spark:spark-streaming-kafka_2.10:1.6.1" level="project" />
@@ -189,5 +184,58 @@
     <orderEntry type="library" name="Maven: org.apache.kafka:kafka-clients:0.8.2.1" level="project" />
     <orderEntry type="library" name="Maven: com.101tec:zkclient:0.3" level="project" />
     <orderEntry type="library" name="Maven: org.apache.spark:spark-streaming_2.10:1.6.1" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.spark:spark-examples_2.10:1.1.1" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.spark:spark-streaming-twitter_2.10:1.1.1" level="project" />
+    <orderEntry type="library" name="Maven: org.twitter4j:twitter4j-stream:3.0.3" level="project" />
+    <orderEntry type="library" name="Maven: org.twitter4j:twitter4j-core:3.0.3" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.spark:spark-streaming-flume_2.10:1.1.1" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.spark:spark-streaming-flume-sink_2.10:1.1.1" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.flume:flume-ng-core:1.4.0" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.flume:flume-ng-configuration:1.4.0" level="project" />
+    <orderEntry type="library" name="Maven: org.mortbay.jetty:servlet-api:2.5-20110124" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.mina:mina-core:2.0.4" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.flume:flume-ng-sdk:1.4.0" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.spark:spark-streaming-zeromq_2.10:1.1.1" level="project" />
+    <orderEntry type="library" name="Maven: org.spark-project.akka:akka-zeromq_2.10:2.2.3-shaded-protobuf" level="project" />
+    <orderEntry type="library" name="Maven: org.spark-project.akka:akka-actor_2.10:2.2.3-shaded-protobuf" level="project" />
+    <orderEntry type="library" name="Maven: org.spark-project.protobuf:protobuf-java:2.4.1-shaded" level="project" />
+    <orderEntry type="library" name="Maven: org.zeromq:zeromq-scala-binding_2.10:0.0.7" level="project" />
+    <orderEntry type="library" name="Maven: net.java.dev.jna:jna:3.0.9" level="project" />
+    <orderEntry type="library" name="Maven: com.github.jnr:jnr-constants:0.8.2" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.spark:spark-streaming-mqtt_2.10:1.1.1" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.paho:mqtt-client:0.4.0" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.hbase:hbase:0.94.6" level="project" />
+    <orderEntry type="library" name="Maven: com.github.stephenc.high-scale-lib:high-scale-lib:1.1.1" level="project" />
+    <orderEntry type="library" name="Maven: org.mortbay.jetty:jetty:6.1.26" level="project" />
+    <orderEntry type="library" name="Maven: org.mortbay.jetty:jsp-2.1:6.1.14" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.jdt:core:3.1.1" level="project" />
+    <orderEntry type="library" name="Maven: org.mortbay.jetty:jsp-api-2.1:6.1.14" level="project" />
+    <orderEntry type="library" name="Maven: org.mortbay.jetty:servlet-api-2.5:6.1.14" level="project" />
+    <orderEntry type="library" name="Maven: org.codehaus.jackson:jackson-jaxrs:1.8.8" level="project" />
+    <orderEntry type="library" name="Maven: org.codehaus.jackson:jackson-xc:1.8.8" level="project" />
+    <orderEntry type="library" scope="RUNTIME" name="Maven: tomcat:jasper-compiler:5.5.23" level="project" />
+    <orderEntry type="library" scope="RUNTIME" name="Maven: tomcat:jasper-runtime:5.5.23" level="project" />
+    <orderEntry type="library" name="Maven: commons-el:commons-el:1.0" level="project" />
+    <orderEntry type="library" name="Maven: org.jamon:jamon-runtime:2.3.1" level="project" />
+    <orderEntry type="library" name="Maven: com.sun.jersey:jersey-json:1.8" level="project" />
+    <orderEntry type="library" name="Maven: org.codehaus.jettison:jettison:1.1" level="project" />
+    <orderEntry type="library" name="Maven: com.sun.xml.bind:jaxb-impl:2.2.3-1" level="project" />
+    <orderEntry type="library" name="Maven: javax.xml.bind:jaxb-api:2.1" level="project" />
+    <orderEntry type="library" name="Maven: javax.activation:activation:1.1" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.jetty:jetty-server:8.1.14.v20131031" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.jetty:jetty-continuation:8.1.14.v20131031" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.jetty:jetty-http:8.1.14.v20131031" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.jetty:jetty-io:8.1.14.v20131031" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.jetty:jetty-util:8.1.14.v20131031" level="project" />
+    <orderEntry type="library" name="Maven: com.twitter:algebird-core_2.10:0.1.11" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.cassandra:cassandra-all:1.2.6" level="project" />
+    <orderEntry type="library" name="Maven: org.antlr:antlr:3.2" level="project" />
+    <orderEntry type="library" name="Maven: com.googlecode.json-simple:json-simple:1.1" level="project" />
+    <orderEntry type="library" name="Maven: org.yaml:snakeyaml:1.6" level="project" />
+    <orderEntry type="library" name="Maven: edu.stanford.ppl:snaptree:0.1" level="project" />
+    <orderEntry type="library" name="Maven: org.mindrot:jbcrypt:0.3m" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.cassandra:cassandra-thrift:1.2.6" level="project" />
+    <orderEntry type="library" name="Maven: com.github.stephenc:jamm:0.2.5" level="project" />
+    <orderEntry type="library" name="Maven: com.github.scopt:scopt_2.10:3.2.0" level="project" />
   </component>
 </module>
