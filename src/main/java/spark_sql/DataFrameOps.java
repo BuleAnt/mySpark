@@ -22,7 +22,7 @@ public class DataFrameOps {
 
         // DataFrame基于数据来源构建，例如说Json数据读取。
         // DataFrame可以理解为一张表,SQLContext可以设置其方言。
-        DataFrame df = sqlContext.read().json("people.json");
+        DataFrame df = sqlContext.read().json("src/main/resources/people.json");
 
         df.show();//select * from table;
 
