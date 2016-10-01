@@ -1,5 +1,5 @@
 Spark SQL 实战
-在$SPARK_HOME/conf下复制一个hive-size.conf,并添加一下配置
+在$SPARK_HOME/conf下复制一个hive-size.xml,并添加一下配置
     <property>
 		<name>hive.metastore.uris</name>
 		<value>thrift://hadoop:9083</value>
@@ -46,13 +46,25 @@ val df = sqlContext.read.josn(“/library/examples/src/main/resources/people.jso
 把数据读取进来，知道数据的基本信息，json数据是key-value级别。
 
 
-使用Java编写DataFrame   See:main/java/spark/sql/DataFrameOps.java
-使用Scala编写DataFrame  See:main/scala/spark/sql/DataFrameOpsScala.java
+使用Java编写DataFrame   See:main/java/spark_sql/DataFrameOps.java
+使用Scala编写DataFrame  See:main/scala/spark_sql/DataFrameOpsScala.scala
 
 maven 打包参考http://www.cnblogs.com/yjmyzz/p/4694219.html
+导包后,使用一下命令提交:
+spark-submit --class spark_sql.DataFrameOpsScala --master spark://hadoop:7077 /home/hadoop/Document/export/xx.jar
+业界为了统一，提交的过程，加上一个 --file,指定额外的配置文件,不用也没问题,主要是没用Hive的功能。
+--files $SPARK_HOME/conf/hive-site.xml
+或写入到一个shell脚本中:
 
+/usr/local/spark/spark-1.6.0-bin-hadoop2.6/bin/spark-submit
+--class com.dt.spark.sql.DataFrameOps
+--files $HIVE_HOME/conf/hive-site.xml
+--driver-class-path $SPARK_HOME/lib/mysql-connector-java-5.1.35-bin.jar
+--master spark://Master:7077 /home/hadoop/Document/export/WordCount.jar
 
-
+这样可以配置Hive的不同数据来源，如果不配置，就找Hive默认的配置信息。
+数据仓库可能有不同的数据仓库。这么写是有道理的。Spark SQL当然可以用HQL。
+如果Json数据嵌套比较复杂，先做一下ETL。
 
 
 
