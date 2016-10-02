@@ -23,7 +23,7 @@ public class DataFrameWrite {
 
 	private void mian() {
 		SparkConf conf = new SparkConf().setMaster("local").setAppName(
-				"RDD2DataFrameByReflection");
+				"DataFrameWrite");
 		JavaSparkContext sc = new JavaSparkContext(conf);
 		SQLContext sqlContext = new SQLContext(sc);
 

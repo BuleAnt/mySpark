@@ -66,6 +66,31 @@ spark-submit --class spark_sql.DataFrameOpsScala --master spark://hadoop:7077 /h
 数据仓库可能有不同的数据仓库。这么写是有道理的。Spark SQL当然可以用HQL。
 如果Json数据嵌套比较复杂，先做一下ETL。
 
+使用Java和Scala实战RDD和DataFrame
+-------------------------------------------------------
+	1，RDD和DataFrame转换的重大意义
+	2，使用Java实战RDD与DataFrame转换
+	3，使用Scala实战RDD与DataFrame转换
+
+一：RDD和DataFrame转换的重大意义
+    这种转换是相互的。RDD可以接上数据库，文件系统等数据来源。
+    可以通过java的bean或者case class来获取RDD数据的schema,创建DataFrame。
+        Java 的bean不能有嵌套结构和复杂数据结构。
+        Scala本身没有这种限制，Scala可以做类型推断和隐式转换等。
+    coding See:
+        RDD2DataFrameByReflectionJava.java
+	    RDD2DataFrameByReflectionScala.scala
+    另外一种更加常见情况，创建DataFrame时，并不知道RDD的数据，需要动态获取schema
+    使用Java和Scala实战RDD和DataFrame动态转换操作
+	1，RDD和DataFrame的动态转换
+    上一讲，知道了原数据的信息，是一种非动态的转换方式。
+    只有在运行的时候才知道数据的列的信息，就需要动态转换了，这是生产环境下更加常见的情况。
+    提前知道列的信息，这种情况比较少见，还有就是业务发生改变，列的信息也会改变。
+    需要动态的RDD和DataFrame的动态转换。
+    Job启动的开销，IO的开销，JVM的复用，还有钨丝计划。SparkSQL比Hive的优势很大。
+    Java版本See: RDD2DataFrameByProgrammaticallyJava.java
+
+
 
 
 

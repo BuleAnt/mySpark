@@ -3,3 +3,8 @@
 *.iml
 out/*
 .idea/
+将删除 conf/
+将删除 metastore_db/tmp/
+将删除 src/readme/
+将删除 src/test/java/
+将删除 target/

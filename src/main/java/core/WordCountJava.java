@@ -27,7 +27,7 @@ public class WordCountJava {
         // SparkContext类在不同的语言中不同,如果是Java开发,为JavaSparkContext
         JavaSparkContext sc = new JavaSparkContext(conf);
         JavaRDD<String> lines = sc
-                .textFile("/opt/single/spark-compiled/README.md");
+                .textFile("src/main/java/core/JavaWordCount.java");
         // 如果是scala,由于SAM转换,可以写成:val lines =
         // sc.textFile("/user/spark/wc/input/data")
         JavaRDD<String> words = lines

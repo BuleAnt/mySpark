@@ -10,12 +10,10 @@ object DataFrameOpsScala {
   def main(args: Array[String]) {
     val conf = new SparkConf()
 
-    conf.setAppName("DataFrameOpsScala")
-
-    conf.setMaster("spark://hadoop:7077")
-
+    conf.setAppName("DataFrameOpsScala").setMaster("local")
+    //conf.setMaster("spark://hadoop:7077")
     val sc = new SparkContext(conf)
-    sc.setLogLevel("WARN")
+    // sc.setLogLevel("WARN")
     val sqlContext = new SQLContext(sc)
 
     val df = sqlContext.read.json("/home/hadoop/Documents/workspaces/IdeaProjects/mySpark/src/main/resources/people.json")
