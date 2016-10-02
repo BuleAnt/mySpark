@@ -22,7 +22,7 @@ public class SecondarySortApp {
 				"local");
 		@SuppressWarnings("resource")
 		JavaSparkContext sc = new JavaSparkContext(conf);
-		JavaRDD<String> lines = sc.textFile("file:///home/hadoop/test/data/a");
+		JavaRDD<String> lines = sc.textFile("file:///home/hadoop/test/data/txt/a");
 		JavaPairRDD<SecondarySortKeyJava, String> pairs = lines
 				.mapToPair(new PairFunction<String, SecondarySortKeyJava, String>() {
 					private static final long serialVersionUID = 1L;
