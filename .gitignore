@@ -4,6 +4,7 @@
 out/*
 target/*
 .idea/
+target/*
 将删除 conf/
 将删除 metastore_db/tmp/
 将删除 src/readme/
