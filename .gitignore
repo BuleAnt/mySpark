@@ -2,6 +2,7 @@
 .idea/*
 *.iml
 out/*
+target/*
 .idea/
 将删除 conf/
 将删除 metastore_db/tmp/
