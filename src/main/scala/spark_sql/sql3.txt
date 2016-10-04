@@ -1,0 +1,450 @@
+Spark SQL下的Parquet使用
+一：Spark SQL下的Parquet使用最佳实践(经验谈)
+	1,过去整个业界对大数据的分析的技术栈的Pipeline一般分为以下两种方式：
+		A）Data Source => HDFS => MR/Hive/Spark（ETL）进行初步的数据提取
+			=> 生成目标数据,放在HDFS Parquet=> Spark SQL/Impala
+			=> Result Service（可放在DB中，也可被通过JDBC/ODBC来作为数据服务使用）；
+		B）Data Source => Real time update data to HBase/DB(相对实时更新)
+			=> Export to Parquet => Spark SQL(ML,GraphX)/Impala
+			=> Result Service（可放在DB中，也可被通过JDBC/ODBC来作为数据服务使用）；
+			注：上述的第二种方式完全可以通过Kafka + Spark Streaming +Spark SQL(结合ML,GraphX)-->Parquet方式
+			（内部也强烈建议Parquet的方式来存储数据）的方式取代。
+	期待的方式：Data Source -> Kafka -> Spark Streaming -> Parquet
+	-> Spark SQL(+ML+GraphX等…) -> Parquet -> others Data Mining
+
+二：Parquet介绍
+	1,parquet是列式存储格式的一种文件类型，列式存储有以下的核心优势：
+		a)可以跳过不符合条件的数据，只读取需要的数据，降低IO数据量。
+		b)压缩编码可以降低磁盘存储空间。由于同一列的数据类型是一样的，可以使用更高效的压缩编码
+			（例如Run Length Encoding和Delta Encoding）进一步节约存储空间。
+		c)只读取需要的列，支持向量运算，能够获取更好的扫描性能。
+	读取ParquetDemo See:SparkSQLParquetOps.java
+	官方文档参考:
+	http://spark.apache.org/docs/1.6.1/sql-programming-guide.html#schema-merging
+	Schema Merging功能强大,能够path的根据树状结构通过read.option("mergeSchema", "true");
+	指定一个父目录合并多个parquet格式文件的path
+	其他学习角度:
+		parquet如何分片,block大小如何控制,schema优化如何序列化反序列化,如何pushdown
+		http://www.infoq.com/cn/articles/in-depth-analysis-of-parquet-column-storage-format/
+        http://flykobe.com/index.php/2016/03/02/sparksql-parquet-pushdown/
+
+三:Spark SQL下的Parquet优势(结果论):
+	1.如果说HDFS是大数据时代分布式文件系统存储的事实标准的话,
+	Parquet则是整个大数据时代文件存储格式的事实标准.
+	2.速度更快;
+		从使用Spark SQL操作普通文件CSV和Parquet文件的速度对比上来看,
+		绝大多情况下使用Parquet会比使用CSV等普通文件速度提升10倍左右:
+		(在一些普通文件系统无法在Spark上成功运行程序的情况下,使用Parquet很多时候都可以成功运行)
+	3.Parquet的压缩技术非常稳定出色;(Parquet自己可压缩,不需要使用其他压缩)
+		在Spark SQL中对压缩技术的处理可能无法正常完成工作(例如会导致Lost Task,Lost Executor),
+		但是此时如果使用Parquet就可以正常完成.
+	4.极大减少磁盘I/O;
+		通常情况下能够减少75%的存储空间,由此可以极大的减少Spark SQL处理数据的时候的数据输入内容,
+		尤其是在Spark1.6.x中下推过滤器(where过滤提前)在一些情况下,可以极大的进一步减少磁盘IO和内存的占用
+	5.Spark1.6(新的算法)+Parquet极大的提升了数据扫描的吞吐量,这极大的提高了数据查找速度.
+		spark 1.6和spark1.5.x相比较而言提升了1倍的速度,
+		在Spark1.6.x中操作Parquet时候,CPU的使用也进行了极大的优化,有效的降低了CPU的使用
+	6.采用Parquet可以极大的优化Spark的调度和执行;
+		我们测试表面Spark如果采用Parquet可以有效的减少Stage的执行消耗,同时可以优化执行路径.
+	工作中将会90%的数据文件格式以parquet格式,正常情况下能用改格式尽量使用
+
+四:Spark SQL下的Parquet内幕解密(理解性)
+	引入:嵌套数据格式
+	在大数据环境下，数据的来源多种多样，日志是非常复制的嵌套数据类型,
+		例如埋点数据，很可能需要把程序中的某些对象内容作为输出的一部分，而每一个对象都可能是嵌套的，
+		例如Twitter一个典型的日志schema有87列,嵌套7层,
+	而关系数据库支持的数据模型都是扁平式的，遇到诸如List、Map和自定义Struct的时候就需要用户自己解析，
+	所以如果能够原生的支持这种数据，查询的时候就不需要额外的解析便能获得想要的结果:设计一个列式存储格式
+		即能支持关系型数据(简单数据类型如int,string..),
+		又能支持复杂的嵌套类型数据(map,list等及自定义Struct),
+		同时能使用多种数据处理框架(数据,元数据,引擎)
+		http://blog.csdn.net/yu616568/article/details/51868447
+
+	1.列式存储Parquet是以基本格式来存储数据的:表现上是树状数据结构,在内部有元数据的Table
+		无论Parquet存储的什么数据，都和计算框架解耦合。
+	2.在具体的Parquet文件存储的时候有三种核心组成部分:
+		a) Storage Format:
+			parquet定义了具体的数据内部的类型和存储格式,表面上看不到
+		b) Object Model Converters:
+			Parquet中负责计算框架中数据对象和Parquet文件具体数据类型的映射
+		c) Object Models:
+			在Parquet中具有自己的Object Model定义的存储格式,
+				例如说Avro格式具有自己的Object Model,
+			但Parquet在处理相关的格式的数据的时候,使用自己对Object Model来存储:
+			映射完成后,Parquet会进行自己的Column Encoding,然后存储成为Parquet格式的文件.
+
+	Parquet本身就是一个框架，也算是一个软件，是一个独立的数据结构，不依赖其他任何的数据结构。
+	Modules
+		The parquet-format project包含格式规范和需要正确读取Parquet文件元数据的接口函数
+		parquet-format project包含多个子模块,实现了嵌套列式数据流的读写的核心组件
+		parquet-mr project包含多个子模块,实现了嵌套列式数据流的读写的核心组件,将这个核心映射到parquet格式;
+			并提供Hadoop的输入/输出格式,pig加载器和其他java基础读取与Parquet交互,她们都是通过mr。
+		The parquet-compatibility project包含可用于通用的检测,使用不同语言来实现,进行检测可以读写的文件
+
+	Parquet支持嵌套的数据模型，类似于Protocol Buffers，
+    每一个数据模型的schema包含多个字段，每一个字段有三个属性：
+        重复次数、数据类型和字段名，
+	    重复次数可以是以下三种：
+	    required（出现1次），optional（出现0次或者1次），repeated（出现0次或者多次）。
+	举例说明：
+	message AddressBook {
+		required string owner;
+		repeated string ownerPhoneNumbers;
+		repeated group contacts
+			{ required string name; optional string phoneNumber; }
+	}
+	树状结构为:AddressBook--[owner,ownerPhoneNumbers,contacts--[name,phoneNumber]]
+
+	第一点：就数据存储本身而言，只考虑叶子阶段。
+		在Schema中所有的基本类型字段都是叶子节点
+		Parquet中没有Map、Array这样的复杂数据结构,但是可以通过repeated和group组合来实现的。
+	第二点：在逻辑上，Schema实质上是一个Table,格式如下:
+
+			AddressBook
+	owner   ownerPhoneNumber     contacts
+								name    PhoneNumber
+
+	第三点：对于一个Parquet文件而言，数据会被分成Row Group
+		（里面包含很多Column，每个Column具有几个非常重要的特性，例如Repetition，Definition Level）。
+		高效的嵌套数据格式的压缩算法Striping/Assembly算法原理:根据两个level值和类型的利用不同压缩算法
+	第四点：Column在Parquet中是以Page的方式存在的。
+		Page里有Repetition，Definition Level。实际上会划分为矩阵。
+		这里相关概念:
+			行组(Row Group)包含数据物理结构的多行;列块(Column Chunk)每个行组中每列为一个列块
+			每个列块分为多个页(Page),Page是最小的编码的单位,同一个列块的不同页可能使用不同的编码方式
+	第五点：Row Group在Parquet中是数据读写的缓存单元。
+		所以对Row Group 的设置会极大的影响Parquet和使用速度和效率。
+		如果是分析日志的话，我们一般建议把Row Group的缓存大小配置成大于256M,很多人的配置都是大于1G。
+		如果想带来最大化的运行效率，强烈建议HDFS的Block大小和Row Group一致。
+
+		事实上存储的时候，会将AddressBook正向存储为4列，读取的时候会逆向还原出AddressBook对象。
+		record shredding and assembly algorithm
+		从根节点往叶子节点遍历的时候，会记录深度的东西，这个就是Definition Level。
+			需要Definition Level是方便我们精准找到数据。
+			owner是required，所以将其Definition Level可以定义为0。
+			ownerPhoneNumber节点，其没有叶子节点，定义其1。
+			Name节点，是required，定义为1。
+			PhoneNumber是optional，有可能出现也有可能不出现，定义为2.
+		Repetition Level：重复级别。
+			Owner为0，ownerPhoneNumber为1，name和phoneNumber都是1.
+		基于上面的逻辑树，映射成物理结构是非常容易的。其实就是一个基本的Table。
+	第六点：在实际存储的时候把一个树状结构，通过巧妙的编码算法，转换成二维表结构。
+
+---------------------------------------------------------------------------
+五:Spark SQL下Parquet的数据切分和压缩
+	1，Spark SQL下的Parquet数据切分
+	2，Spark SQL下的Parquet数据压缩
+
+根据第二条中的官方演示:
+	http://spark.apache.org/docs/1.6.1/sql-programming-guide.html#schema-merging
+	See: ParquetSchemaMerge.scala
+	也可以在Spark-Shell中操作
+
+源码追踪:
+DataFrame
+def save(path: String): Unit = {
+    write.save(path)
+  }
+-->DataFrameWriter
+	def save(path: String): Unit = {
+        this.extraOptions += ("path" -> path)
+        save()
+      }
+	其中:extraOptions HashMap
+	-->def save(): Unit = {
+	     ResolvedDataSource.apply(provider,partitionColumns,mode,dataFrame)
+	创建一个ResolvedDataSource保存DataFrame的内容
+	-->DataFrame的type进行case class
+	val clazz: Class[_] = lookupDataSource(provider)寻找元数据的类信息
+		--> val provider2 = s"$provider.DefaultSource"
+		即:backwardCompatibilityMap中的parquet.DefaultSource
+		该类继承HadoopFsRelationProvider
+	relation = clazz.newInstance()模式匹配HadoopFsRelationProvider
+	对output path进行说明,通过options进行new Path()
+	接下来一堆:caseSensitive,equality,dataSchema初始化
+	然后val r = dataSource.createRelation(..)
+	-->trait HadoopFsRelationProvider根据参数new一个基本的relation,大小写不敏感
+		实现类DefaultSource(parquet包下的),
+		override def createRelation{
+		ParquetRelation.apply
+		这里进入ParquetRelation的初始化如:
+			-->shouldMergeSchemas判断merge schemas
+			mergeRespectSummaries
+			metadataCache
+			等等其中调用到InternalRow.apply()
+			--> new GenericInternalRow(values.toArray)生成内部的Row
+			其使用一个object的数组作为底层存储等等...
+		class ParquetOutputWriter
+		--> new ParquetOutputFormat[InternalRow]()
+		该ParquetOutputFormat extends FileOutputFormat
+		也就是hadoop的FileOutputFormat,其是Abstract类
+		该实现类中定义了BLOCK_SIZE,PAGE_SIZE等初始化配置参数等
+		以及对应的get/set方法,注:(Parquet的Block也就是一个RowGroup)
+
+		这里通过监控内存,log日志等查看,可以发现指定PAGE_SIZE的大小为压缩后的大小
+		从Parquet的角度来讲，Parquet的BLOCK_SIZE和HDFS的block的size一致。
+		总体上讲是压缩后的Parquet的BLOCK_SIZE。
+		Parquet在读写的时候会非常耗内存，因为其采用很多cache。
+		但是可以减少磁盘寻址带来的IO吞吐量。
+		减压后的Parquet解压后的大小是压缩后的大小的5-10倍。
+
+		如果BufferedSize超过了PAGE_SIZE,就会flush,导致writePage的方法
+		Page的特性Repetition，Definition Level以二进制方式经过编码压缩存储
+		Page是压缩和编码的最小单位。
+        每个Parquet至少包含一个rowGroup，一个rowGroup包含多个列块。
+        在数据读写的过程中，序列化和反序列化需要消耗60-80%的时间。
+			参考:DictionaryValuesWriter.getBufferedSize()
+			RunLengthBitPackingHybridValuesReader
+			编码压缩参考:ColumnChunkPageWriteStore.writePage
+			interface ColumnWriter
+
+		ParquetInputFormat，rawSplits会根据具体的实现进行split。
+        如果一个rowGroup跨多个split的时候，这个牵扯到数据的网络通信。
+        算法设计的时候尽可能减少数据的迁移，减少从其他机器上读取数据。
+			参考相关类:
+			RecordWriter<Void, T> getRecordWriter
+			SqlNewHadoopPartition.getPartitions
+			ParquetInputFormat
+
+	SqlNewHadoopPartition.compute
+	enableUnsafeRowParquetReader &&
+        format.getClass.getName == "org.apache.parquet.hadoop.ParquetInputFormat
+
+	-->new UnsafeRowParquetRecordReader()
+	parquetReader.tryInitialize(
+		--> initialize(inputSplit, taskAttemptContext);
+		对requestedSchema获取originalTypes遍历和判断(有些type不支持)
+		这里使用的是UnsafeRow
+		rows[i] = new UnsafeRow();
+		该类是一个Row的实现,它可以得到原生内存支持,而不是java对象
+		其中有这样代码:Platform.copyMemory,这个是sun包下的对堆外原生内存的复制
+		最终调用native方法native int getInt
+		getBinary()调用到Platform.copyMemory()方法
+		开启unsafeRow，没有稳定性问题。
+
+		ParquetRecordReader<T> extends RecordReader<Void, T> {
+		从Parquet的一个block中读取一个records
+
+	该类中方法loadBatch()通过nextKeyValue()判断对数据;批量加载
+	loadBatch()解码，一批一批去读数据。
+	批量的values解码为rows,通过模式匹配调用对应的解码方法如:decodeIntBatch(i, num);
+
+	ParquetFileReader implements Closeable {
+	是Parquet文件读取器的内部实现,作为一个block的容器
+	ParquetFileReader本身读取的是没有被解压和被序列化的数据。是以一个block为单位读取数据。
+
+从使用接口的角度看Sprak SQL Parquet。
+类关系:
+	ParquetInputFormat<Row>-->FileInputFormat{
+	createRecordReader()创建Reader
+	即复合:ParquetRecordReader
+	}
+
+	ParquetRecordReader-->RecordReader{
+	复合: InternalParquetRecordReader
+	其实通过InternalRecordReader来nextKey的方式读取RowGroup数据
+	}
+
+	InternalParquetRecordReader{
+	reader.readNextRowGroup();
+	通过MessageColumnIO进行ParquetIO操作
+	MessageColumnIO = columnIOFactory.getColumnIO(requestedSchema, fileSchema, strictTypeChecking);
+	MessageColumnIO通过columnIOFactory的工厂方法生成
+	}
+
+	MessageColumnIO-->GroupColumnIO{
+		 new RecordReaderImplementation(...
+		 new ColumnReadStoreImpl())
+		 具体的阅读器
+	}
+
+	ColumnReadStoreImpl-->ColumnReadStore{
+		PageReadStore
+	}
+
+	FilteringRecordMaterializer{
+		FilteringGroupConverter
+	}
+
+	FilteringGroupConverter{
+		PrimitiveColumnIO
+		getConverter()
+	}
+
+	IncrementallyUpdatedFilterPredicateBuilder-->IncrementallyUpdatedFilterPredicateBuilderBase{
+	如果想要更新Parquet的文件，可以使用ORC。
+	Parquet不支持文件的更新。Spark SQL可以直接操作ORC。
+	}
+
+	IncrementallyUpdatedFilterPredicateBuilderBase{
+	visit()
+	}
+
+六:Spark SQL下Parquet中PushDown(下推)
+-----------------------------------------------------------------
+	1  SparkSQL下的PushDown的价值
+	2  SparkSQL下的Parquet的PuahDown实现
+	http://flykobe.com/index.php/2016/03/02/sparksql-parquet-pushdown/
+	http://blog.csdn.net/slq1023/article/details/51079975
+
+	Hive中也有PushDown。PushDown可以极大减少数据输入，极大的提高处理效率。
+	SparkSQL实现了PushDown，在Parquet文件中实现PushDown具有很重要的意义。
+	PushDown是一种SQL优化方式，通常用在查询。
+		假设通过DataFrame查询:
+		df.select(a, b, c).filter(by a).filter(by b).select(c).filter(by c)
+		在optimizer阶段，需要合并多个filters(CombineFilters)，并调整算子间的顺序，
+		例如将部分filter移到select等前面(PushPredicateThroughAggregate/Generate/Join/Project)。
+		filter前需要操作一大批数据，但filter后只需要操作很小一部分数据，
+		SQL优化时就希望一开始就只操作这一小部分数据，而不需要把所有数据都导入进来，因为最终还是要被过滤掉。
+
+	PushDown本身既有SQL语法的层面也有物理执行的层面。
+	语法层面，SparkSQL和Hive都有自己的语法实现。
+	下面看一下QueryExecution的源码：
+		def assertAnalyzed(): Unit = sqlContext.analyzer.checkAnalysis(analyzed)
+
+		lazy val analyzed: LogicalPlan = sqlContext.analyzer.execute(logical)
+
+		lazy val withCachedData: LogicalPlan = {
+		 assertAnalyzed()
+		 sqlContext.cacheManager.useCachedData(analyzed)
+		}
+
+		lazy val optimizedPlan: LogicalPlan = sqlContext.optimizer.execute(withCachedData)
+
+		lazy val sparkPlan: SparkPlan = {
+		 SQLContext.setActive(sqlContext)
+		 sqlContext.planner.plan(optimizedPlan).next()
+		}
+
+		// executedPlan should not be used to initialize any SparkPlan. It should be
+		// only used for execution.
+		lazy valexecutedPlan: SparkPlan = sqlContext.prepareForExecution.execute(sparkPlan)
+
+		/** Internal version of the RDD. Avoids copies and has no schema */
+		lazy valtoRdd: RDD[InternalRow] =executedPlan.execute()
+
+		protected def stringOrError[A](f: =>A): String =
+		 try f.toString catch { casee: Throwable => e.toString }
+
+		def simpleString: String = {
+		 s"""== Physical Plan ==
+		    |${stringOrError(executedPlan)}
+		   """.stripMargin.trim
+		}
+
+		override def toString:String = {
+		 def output =
+		   analyzed.output.map(o =>s"${o.name}:${o.dataType.simpleString}").mkString(", ")
+
+		 s"""== Parsed Logical Plan ==
+		    |${stringOrError(logical)}
+
+	QueryExecution在具体实现时会把工作过程串联成一个WorkFlow。
+		SQL语句的翻译过程：
+		1 基本语法翻译
+		2 pharser翻译
+		3 优化
+		4 Logical plan
+		5 Physical执行计划
+		6 引擎上执行
+	sql在执行前会生成一个语法树，解析和优化，在优化阶段会把Filter合并，在合并时会考虑Filter的顺序。
+	下面再看一下spark.sql.catalyst.Optimizer的源码：
+	  val batches=
+        // SubQueries are only needed for analysis and can be removed before execution.
+        Batch("Remove SubQueries",FixedPoint(100),
+          EliminateSubQueries) ::
+        Batch("Aggregate",FixedPoint(100),
+          ReplaceDistinctWithAggregate,
+          RemoveLiteralFromGroupExpressions) ::
+        Batch("Operator Optimizations",FixedPoint(100),
+
+          // Operator push down
+          SetOperationPushDown,
+          SamplePushDown,
+          PushPredicateThroughJoin,
+          PushPredicateThroughProject,
+          PushPredicateThroughGenerate,
+          PushPredicateThroughAggregate,
+          ColumnPruning,
+
+          // Operator combine
+          ProjectCollapsing,
+          CombineFilters,
+          CombineLimits,
+
+          // Constant folding
+          NullPropagation,
+          OptimizeIn,
+          ConstantFolding,
+          LikeSimplification,
+          BooleanSimplification,
+          RemoveDispensableExpressions,
+          SimplifyFilters,
+          SimplifyCasts,
+          SimplifyCaseConversionExpressions) ::
+        Batch("Decimal Optimizations",FixedPoint(100),
+          DecimalAggregates) ::
+        Batch("LocalRelation",FixedPoint(100),
+          ConvertToLocalRelation) :: Nil
+    }
+	PushDown要把上面的操作要放到叶子节点上。这也是为什么叫谓词下推(Predicate pushdown)得原因。
+	当把操作放到叶子节点时就导致操作在数据源上执行。
+
+	下面图示PushDown的过程：
+	Spark SQL PushDow:如各种Filter-->通过引擎构建的SQL语法数据的基础上进行算子的合并及filter等的下推动作
+	-->Catalyst中最终会落得DataSourceStrategy中-->调用Parquet的数据访问接口,进行基于列式存储的高速访问
+	-->Parquet:通过提供的高层次Api来进行操作
+
+	DataSourceStrategy分析:
+	def apply(plan: LogicalPlan): Seq[execution.SparkPlan] = plan match {
+		case PhysicalOperation
+		-->object PhysicalOperation extends PredicateHelper {
+			这里PredicateHelper有设置下推的策略
+			def unapply(plan: LogicalPlan): Option[ReturnType] = {
+				val (fields, filters, child, _) = collectProjectsAndFilters(plan)
+				这里会将计算链条解析为四个元素的元组
+		toCatalystRDD(l, requestedColumns, t.buildScan(requestedColumns, allPredicates))) :: Nil
+		将一个原生RDD转换为一个InternalRow RDD,其catalyst类型含有objects
+		--> execution.RDDConversions.rowToRowRdd(rdd, output.map(_.dataType))
+
+	protected def pruneFilterProject(){
+		内部基于scanBuilder封装
+		scanBuilder(requestedColumns, pushedFilters.toArray)
+		val scan = execution.PhysicalRDD.createFromDataSource(
+		根据传进参数最终完成结合底层数据的pushDown的filter的过程
+		parquet最根本的结构是SqlNewHadoopRDD,计算通过其compute方法
+		这里回顾上以节,有两种方式一种是unsafe,一种是基本的方式
+		parquet操作的block级别的对象:RowGroup,对其操作有个类RowGroupFilter,
+		上层如果把filter传递到这里,visit访问数据的时候,就会根据该类进行谓词下推的处理
+		visit(FilterCompat.FilterPredicateCompat filterPredicateCompat) {
+		循环构建  filteredBlocks.add(block);返回BlockMetaData的list
+		然后ParquetRecordReader可以读取数据,通过InternalParquetRecordReader读取
+		接上上一节内容:-->MessageColumnIO
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Index Condition PushDwon（ICP）是Mysql5.6版本中的新特性，是一种在存储引擎层使用索引过滤数据的一种优化方式。
+当打开ICP时，如果部分where条件能使用索引中的字段，MysqlServer会把部分下推到引擎层，可以利用index过滤的where条件在存储引擎层进行数据过滤，而非将所有通过index acess的结果传递到Mysql Server层进行where过滤。
+优化效果：ICP能减少引擎层访问基表的次数和 Mysql Server访问存储引擎的次数，减少io次数，提高查询语句性能。
+将SQL类型的查询语言整合到Spark的核心RDD概念里，这样可应用于多种任务，流处理，批处理，包括机器学习都可以引入SQL。
+第六十六讲 <wbr> <wbr> <wbr>Spark <wbr>SQL核心流程

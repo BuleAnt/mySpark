@@ -13,6 +13,7 @@ Spark SQL 实战
         或者hive –service metastore >metastore.log 2>& 1&
     启动spark然后,启动一个spark-shell
 
+无法local运行
 ------------------------------------------------------------------
 操作如下:
 val hiveContext = new org.apache.spark.sql.hive.HiveContext(sc)
@@ -73,25 +74,57 @@ spark-submit --class spark_sql.DataFrameOpsScala --master spark://hadoop:7077 /h
 	3，使用Scala实战RDD与DataFrame转换
 
 一：RDD和DataFrame转换的重大意义
-    这种转换是相互的。RDD可以接上数据库，文件系统等数据来源。
-    可以通过java的bean或者case class来获取RDD数据的schema,创建DataFrame。
-        Java 的bean不能有嵌套结构和复杂数据结构。
-        Scala本身没有这种限制，Scala可以做类型推断和隐式转换等。
-    coding See:
-        RDD2DataFrameByReflectionJava.java
-	    RDD2DataFrameByReflectionScala.scala
-    另外一种更加常见情况，创建DataFrame时，并不知道RDD的数据，需要动态获取schema
-    使用Java和Scala实战RDD和DataFrame动态转换操作
+	这种转换是相互的。RDD可以接上数据库，文件系统等数据来源。
+	可以通过java的bean或者case class来获取RDD数据的schema,创建DataFrame。
+		Java 的bean不能有嵌套结构和复杂数据结构。
+		Scala本身没有这种限制，Scala可以做类型推断和隐式转换等。
+	coding See:
+		RDD2DataFrameByReflectionJava.java
+		RDD2DataFrameByReflectionScala.scala
+	另外一种更加常见情况，创建DataFrame时，并不知道RDD的数据，需要动态获取schema
+	使用Java和Scala实战RDD和DataFrame动态转换操作
 	1，RDD和DataFrame的动态转换
-    上一讲，知道了原数据的信息，是一种非动态的转换方式。
-    只有在运行的时候才知道数据的列的信息，就需要动态转换了，这是生产环境下更加常见的情况。
-    提前知道列的信息，这种情况比较少见，还有就是业务发生改变，列的信息也会改变。
-    需要动态的RDD和DataFrame的动态转换。
-    Job启动的开销，IO的开销，JVM的复用，还有钨丝计划。SparkSQL比Hive的优势很大。
-    Java版本See: RDD2DataFrameByProgrammaticallyJava.java
+	上一讲，知道了原数据的信息，是一种非动态的转换方式。
+	只有在运行的时候才知道数据的列的信息，就需要动态转换了，这是生产环境下更加常见的情况。
+	提前知道列的信息，这种情况比较少见，还有就是业务发生改变，列的信息也会改变。
+	需要动态的RDD和DataFrame的动态转换。
+	Job启动的开销，IO的开销，JVM的复用，还有钨丝计划。SparkSQL比Hive的优势很大。
+	Java版本See: RDD2DataFrameByProgrammaticallyJava.java
+	Scala版本See:RDD2DataFrameByProgrammaticallyScala.scala
 
+Spark SQL数据加载和保存内幕和实战
+-------------------------------------------------------
+	1，Spark SQL加载数据
+	2，Spark SQL保存数据
+	3，Spark SQL对数据处理的思考
+Spark SQL再进行数据操作的时候涉及到数据输入输出,其主要操作DataFrame,提供了通用的load/save操作
+	我们可以通过load创建DF,或者通过save保存DF到具体文件,
+	可以以具体格式指明读取或输出的文件格式
+SparkSql源码:
+  def load(path: String): DataFrame = {
+    read.load(path)
+  }
+	其中DataFrameReader是load系统文件成为DataFrame的接口
+	其format(source: String)用于初始化指定文件格式
+	schema(schema: StructType)等
+	load最终在ResolvedDataSource.apply()中通过反射和模式匹配relation = userSpecifiedSchema
+	然后new一个 ResolvedDataSource(clazz, relation),在其中
+		backwardCompatibilityMap提供了jdbc,json,parquet等数据格式的反向移动数据的兼容性
+		lookupDataSource方法支持hive的orc,avro等格式
+	最后调用DataFrame.apply()最终调用class主构造器其中有:
+	toDF(),printSchema(),explain()描述转换方法以及join(),sortWithinPartitions()等sql操作
 
+	DataFrame.write()返回DataFrameWriter,该类可以通过mode指定写入模式
+		SaveMode默认ErrorIfExists,其他Append/Overwrite/Ignore
+		format指定写入格式,其他方法如save,saveAsTable,json,parquet,orc
+	save()方法通过ResolvedDataSource.apply(),其中
+		参数source初始化为df.sqlContext.conf.defaultDataSourceName,其默认为parquet
+	关于parquet:
+	parquet+Spark SQL是经典组合，在生产环境里。采用parquet和不采用的差别有天壤之别。
+	进行数据多维度分析的时候，数据分析层面，基本都是以parquet的方式存储。
+	kudu是历史性突破，想替代HDFS。yarn本身有太多问题。Mesos较为优秀
 
+	Demo See: SparkSQLLoadSaveOps.java
 
 
 

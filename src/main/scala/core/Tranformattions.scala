@@ -36,14 +36,14 @@ object Tranformattions {
     mapped.collect.foreach(println)
   }
 
-  def filterTranformation(sc :SparkContext): Unit ={
+  def filterTranformation(sc: SparkContext): Unit = {
     val nums = sc.parallelize(1 to 10)
-    val filtered = nums.filter(item => item%2 == 0)
+    val filtered = nums.filter(item => item % 2 == 0)
     filtered.collect.foreach(println)
   }
 
-  def flatMapTranformation(sc :SparkContext): Unit ={
-    val bigData = Array("Scala Spark","Java Hadoop","Java Tachyon")
+  def flatMapTranformation(sc: SparkContext): Unit = {
+    val bigData = Array("Scala Spark", "Java Hadoop", "Java Tachyon")
     val bigDataString = sc.parallelize(bigData)
     val words = bigDataString.flatMap(line => line.split(" "))
     words.collect.foreach(println)

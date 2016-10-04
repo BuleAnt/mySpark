@@ -1,0 +1,22 @@
+Spark SQL下案例综合实战
+	1，Spark SQL案例分析
+	2，通过Java和Scala实现案例
+
+peoples.json
+{"name":"Michael","score":98}
+{"name":"Andy","score":95}
+{"name":"Justin","score":68}
+
+另外一个表的数据不在一个文件里，采用代码编程。
+实际场景的数据来源可能有多重不同的数据来源，可能来自另外一个计算框架。
+
+Scala版本
+将数据上传到HDFS上。
+hadoop dfs –put ./peoples.json /library/
+
+
+rdd-->DF
+http://www.it1352.com/220642.html
+http://www.myexception.cn/other/1961405.html
+https://my.oschina.net/cjun/blog/655226
+http://blog.sina.com.cn/s/blog_156a5741a0102wgkm.html

@@ -14,7 +14,7 @@ object HiveDemo {
     //val firstRow = rows.first()
     //println(firstRow.getString(0))
 
-  val tweets = hiveCtx.jsonFile("/home/hadoop/test/spark/input/tweets.json")
+    val tweets = hiveCtx.jsonFile("/home/hadoop/test/spark/input/tweets.json")
     //tweets.registerTempTable("tweets")
     //val results= hiveCtx.sql("SELECT user.name,text FROM tweets")
     ///results.foreach(println)

@@ -1,0 +1,75 @@
+2、Spark MLlib介绍
+
+Spark之所以在机器学习方面具有得天独厚的优势，有以下几点原因：
+
+（1）机器学习算法一般都有很多个步骤迭代计算的过程，机器学习的计算需要在多次迭代后获得足够小的误差或者足够收敛才会停止，迭代时如果使用Hadoop的MapReduce计算框架，每次计算都要读/写磁盘以及任务的启动等工作，这回导致非常大的I/O和CPU消耗。而Spark基于内存的计算模型天生就擅长迭代计算，多个步骤计算直接在内存中完成，只有在必要时才会操作磁盘和网络，所以说Spark正是机器学习的理想的平台。
+
+（2）从通信的角度讲，如果使用Hadoop的MapReduce计算框架，JobTracker和TaskTracker之间由于是通过heartbeat的方式来进行的通信和传递数据，会导致非常慢的执行速度，而Spark具有出色而高效的Akka和Netty通信系统，通信效率极高。
+
+MLlib(Machine Learnig lib) 是Spark对常用的机器学习算法的实现库，同时包括相关的测试和数据生成器。Spark的设计初衷就是为了支持一些迭代的Job, 这正好符合很多机器学习算法的特点。在Spark官方首页中展示了Logistic Regression算法在Spark和Hadoop中运行的性能比较，如图下图所示。
+
+可以看出在Logistic Regression的运算场景下，Spark比Hadoop快了100倍以上！
+
+MLlib目前支持4种常见的机器学习问题: 分类、回归、聚类和协同过滤，MLlib在Spark整个生态系统中的位置如图下图所示。
+
+MLlib基于RDD，天生就可以与Spark SQL、GraphX、Spark Streaming无缝集成，以RDD为基石，4个子框架可联手构建大数据计算中心！
+
+MLlib是MLBase一部分，其中MLBase分为四部分：MLlib、MLI、ML Optimizer和MLRuntime。
+
+l  ML Optimizer会选择它认为最适合的已经在内部实现好了的机器学习算法和相关参数，来处理用户输入的数据，并返回模型或别的帮助分析的结果；
+
+l  MLI 是一个进行特征抽取和高级ML编程抽象的算法实现的API或平台；
+
+l  MLlib是Spark实现一些常见的机器学习算法和实用程序，包括分类、回归、聚类、协同过滤、降维以及底层优化，该算法可以进行可扩充； MLRuntime 基于Spark计算框架，将Spark的分布式计算应用到机器学习领域。
+
+
+3、Spark MLlib架构解析
+
+从架构图可以看出MLlib主要包含三个部分：
+
+l  底层基础：包括Spark的运行库、矩阵库和向量库；
+
+l  算法库：包含广义线性模型、推荐系统、聚类、决策树和评估的算法；
+
+l  实用程序：包括测试数据的生成、外部数据的读入等功能。
+
+
+3.1 MLlib的底层基础解析
+
+底层基础部分主要包括向量接口和矩阵接口，这两种接口都会使用Scala语言基于Netlib和BLAS/LAPACK开发的线性代数库Breeze。
+
+MLlib支持本地的密集向量和稀疏向量，并且支持标量向量。
+
+MLlib同时支持本地矩阵和分布式矩阵，支持的分布式矩阵分为RowMatrix、IndexedRowMatrix、CoordinateMatrix等。
+
+关于密集型和稀疏型的向量Vector的示例如下所示。
+
+疏矩阵在含有大量非零元素的向量Vector计算中会节省大量的空间并大幅度提高计算速度，如下图所示。
+
+标量LabledPoint在实际中也被大量使用，例如判断邮件是否为垃圾邮件时就可以使用类似于以下的代码：
+
+可以把表示为1.0的判断为正常邮件，而表示为0.0则作为垃圾邮件来看待。
+
+对于矩阵Matrix而言，本地模式的矩阵如下所示。
+
+RowMatrix直接通过RDD[Vector]来定义并可以用来统计平均数、方差、协同方差等：
+
+而IndexedRowMatrix是带有索引的Matrix，但其可以通过toRowMatrix方法来转换为RowMatrix，从而利用其统计功能，代码示例如下所示。
+
+CoordinateMatrix常用于稀疏性比较高的计算中，是由RDD[MatrixEntry]来构建的，MatrixEntry是一个Tuple类型的元素，其中包含行、列和元素值，代码示例如下所示：
+
+3.2 MLlib的算法库分析
+
+下图是MLlib算法库的核心内容。
+
+在这里我们分析一些Spark中常用的算法：
+3.2.1 分类算法
+
+分类算法属于监督式学习，使用类标签已知的样本建立一个分类函数或分类模型，应用分类模型，能把数据库中的类标签未知的数据进行归类。分类在数据挖掘中是一项重要的任务，目前在商业上应用最多，常见的典型应用场景有流失预测、精确营销、客户获取、个性偏好等。MLlib 目前支持分类算法有：逻辑回归、支持向量机、朴素贝叶斯和决策树。
+
+案例：导入训练数据集，然后在训练集上执行训练算法，最后在所得模型上进行预测并计算训练误差。
+
+http://www.cnblogs.com/shishanyuan/p/4699644.html
+http://www.cnblogs.com/shishanyuan/p/4747761.html
+http://bbs.csdn.net/topics/391002544
+http://www.it1352.com/220642.html

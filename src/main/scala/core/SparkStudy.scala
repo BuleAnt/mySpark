@@ -5,12 +5,6 @@ import org.apache.spark.{SparkConf, SparkContext}
 /**
   * Created by hadoop on 16-6-30.
   */
-class SparkStudy {
-  //val conf = SparkContext.setAppName(appName).setMaster(master)
-  //val sc = new SparkContext(conf)
-  //val rdd = sc.textFile("/").flatMap(_.split(" ")).map(_ =>(_,1)).reduceByKey(_ + _)
-
-}
 
 object SparkStudy {
   def main(args: Array[String]) {
@@ -20,8 +14,8 @@ object SparkStudy {
       .setMaster("local")
     //.setMaster("spark://hadoop:7077")
     //.setJars(jars)
-    //val sc = new SparkContext(conf)
-    val sc = new SparkContext
+    val sc = new SparkContext(conf)
+
     val logData = sc.textFile(logFile)
     val tempRdd = logData.filter(line => line.contains("100"))
     val numAs = tempRdd.count()
