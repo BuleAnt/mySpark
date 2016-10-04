@@ -1,0 +1,283 @@
+spark
+----------------
+	轻量级高速集群计算
+	针对大规模数据处理快速通用的引擎
+	比hadoop的mr的内存计算快100倍,磁盘运算10倍
+	易于编写使用,可以使用java,scala,python,R语言等
+	提供了80多个高级操作符,可以使用scala,python,R shel与之交互
+	通用性:combine SQL,Streaming,复杂计算
+	无处不在的运行,可以部署到hdfs,mesos,standalone,cloud等
+编译:
+支持Hive和JDBC：对SparkSQL启用Hive、JDBC及CLI（命令行）支持， 构建时需要指定-Phive和-Phive-thriftserver两个编译参数，Spark默认支持Hive版本为0.13.
+可以指定Scala版本，如使用Scala 2.11构建Spark，我们可以采用-Dscala-2.11参数设定-Dscala-2.11.注意:Spark JDBC组建暂时不支持Scala 2.11
+三种方法:其中./make-distribution.sh官方实现脚本,帮助最终打包jar包
+mvn -Pyarn -Phadoop-2.6 -Dhadoop.version=2.7.2 -Phive -Phive-thriftserver -Dscala-2.11.8 -DskipTests clean package
+build/mvn  -Pyarn -Phadoop-2.6 -Dhadoop.version=2.7.2 -Phive -Phive-thriftserver -DskipTests clean package
+./make-distribution.sh --tgz -Pyarn -Phadoop-2.6 -Dhadoop.version=2.7.2 -Phive -Phive-thriftserver -DskipTests
+spark模式
+------------------------
+1.local: 本地模式,不是集群
+	Spark-shell (--master MASTER_URL  spark://host:port, mesos://host:port, yarn, or loc)
+	默认为local	==>JPS  SparkSubmit==>4040 webUI
+	单机模式
+-------------------
+	bin/spark-shell
+	bin/spark-shell --master local[4]
+	haooop:4040
+scala>
+val textFile = sc.textFile("README.md")
+textFile.count()
+textFile.first()
+textFile.take(10)
+2.独立集群模式:standalone cluster mode(hadoop,yarn...)
+	Master--Worker  (配置信息slaves,spark-env.sh $JAVA_HOME)-->
+	export JAVA_HOME=/usr/local/java/jdk1.7.0_80
+	export SPARK_JAVA_OPTS="-verbose:gc -XX:-PrintGCDetails -XX:+PrintGCTimeStamps"
+#默认scala为2.10.4
+	export SCALA_HOME=/usr/local/scala-2.11.8
+#注意如果不配置HADOOP_CONF_DIR,spark运行在本地文件系统上,添加此配置就运行在hdfs上
+	export HADOOP_CONF_DIR=/opt/single/hadoop-2.7.2/etc/hadoop
+	export SPARK_MASTER_IP=hadoop
+	export SPARK_MASTER_PORT=7077
+	export PARK_MASTER_WEBUI_PORT=8080
+	export SPARK_WORKER_CORES=2
+	export SPARK_WORKER_MEMORY=4g
+#	export SPARK_MASTER_OPTS=7078
+#	export SPARK_WORKER_WEBUI_PORT=8081
+	export SPARK_WORKER_INSTANCES=1
+slaves
+	hadoop
+spark-defaults.conf
+	spark.master	spark://hadoop:7077
+	#相当于bin/spark-shell --master spark://hadoop:7077
+单机模式与hadoop上启动
+bin/spark-shell --master local[4]
+bin/spark-shell
+standalone集群模式
+=========================================================
+standalone集群,建立在hadoop的文件系统之上
+export HADOOP_CONF_DIR=/opt/single/hadoop-2.7.2/etc/hadoop
+启动
+	sbin/start-master.sh	在master节点启动
+	sbin/start-slave.sh spark://hadoop:7077	在slave节点启动,此启动方式为逐个启动
+	sbin/start-slaves.sh	在master节点启动
+	sbin/start-all.sh		在master及启动,所有节点相应的进程启动
+	(查看信息:集群webUI	master:/8080 节点worker的webUI  slave:/8081)
+	(spark的webUI master://7077 内部工作UI)
+	启动spark-shell
+	/bin/stark-shell --master spark://hadoop:7077 (任意节点)
+	此时,这个应用就在spark集群上运行通过hadoop:8080查看
+	这个spark-shell的webUI运行状态可以通过 hadoop:4040查看
+
+启动后
+spark运行实例(常用方法演示)
+-----------------
+val textFile = sc.textFile("README.txt")
+textFile.filter(line => line.contains("Spark")
+
+sc.parallelize{List(1,2,3,4,5)}
+val rdd = sc.parallelize{List(1,2,3,4,5)}
+val mapRdd = rdd.map(2 * _)
+ mapRdd.collect
+val filterRdd = sc.parallelize{List(1,2,3,4,5)}.map(_ *2 ).filter( _ > 5).collect
+
+reduceByKey
+------------------------------
+wordcount例子:
+val rdd = sc.textFile("file:///opt/single/spark-compiled/data/mllib/sample_fpgrowth.txt")
+rdd.count
+val wordcount = rdd.flatMap(_.split(' ')).map((_,1)).reduceByKey(_ + _)
+wordcount.collect
+res29: Array[(String, Int)] = Array((z,5), (p,2), (x,4), (t,3), (h,1), (n,1), (v,1), (r,3), (w,1), (s,3), (e,1), (k,1), (y,3), (u,1), (o,1), (q,2), (m,1))
+wordcount.saveAsTextFile("/user/spark/out") //hdfs上
+
+val wordcount = rdd.flatMap(_.split(' ')).map((_,1)).reduceByKey(_ + _).map(x=>(x._2,x._1)).sortByKey(false).map(x=>(x _2,x _1)).saveAsTextFile("/user/spark/wc/out")
+
+val wordcount = sc.textFile("/opt/spark/spark-1.6.1-bin-2.7.2/README.md").flatMap(x =>x.split(" ")).map(x=>(x,1)).reduceByKey(_+_).map(x=>(x._2,x._1)).sortByKey(false).map(x=>(x._2,x._1))
+wordcount.collect
+
+sc.textFile("hdfs://hadoop-spark.dragon.org:8020/user/hadoop/spark/wc.input").flatMap(_.split(" ")).map((_,1)).reduceByKey(_ + _).collect
+
+sc.textFile("hdfs://hadoop-spark.dragon.org:8020/user/hadoop/spark/wc.input").flatMap(line => line.split(" ")).map(word => (word,1)).reduceByKey((a,b) => a + b).collect
+reduce实例
+--------------------------
+val rdd = sc.parallelize(List(1,2,3,4))
+rdd.reduce(_+_)
+res8: Int = 10
+如果只是groupbykey结果如下
+------------------------------
+val wordcount = rdd.flatMap(_.split(' ')).map((_,1)).groupByKey
+wordcount.collect
+res6: Array[(String, Iterable[Int])] = Array((z,CompactBuffer(1, 1, 1, 1, 1)), (p,CompactBuffer(1, 1)), (x,CompactBuffer(1, 1, 1, 1)), (t,CompactBuffer(1, 1, 1)), (h,CompactBuffer(1)), (n,CompactBuffer(1)), (v,CompactBuffer(1)), (r,CompactBuffer(1, 1, 1)), (w,CompactBuffer(1)), (s,CompactBuffer(1, 1, 1)), (e,CompactBuffer(1)), (k,CompactBuffer(1)), (y,CompactBuffer(1, 1, 1)), (u,CompactBuffer(1)), (o,CompactBuffer(1)), (q,CompactBuffer(1, 1)), (m,CompactBuffer(1)))
+union实例
+------------------------------
+val rdd1 = sc.parallelize(List{('a',1);('a',2)})//不同于下面
+val rdd1 = sc.parallelize(List(('a',1),('a',2)))
+val rdd2 = sc.parallelize(List(('b',1),('b',2)))
+val result = rdd1 union rdd2
+result.collect
+res5: Array[(Char, Int)] = Array((a,1), (a,2), (b,1), (b,2))
+join实例
+------------------------------
+val rdd1 = sc.parallelize(List(('a',1),('a',2),('b',3),('b',4)))
+val rdd1 = sc.parallelize(List(('a',5),('a',6),('b',7),('b',8)))
+val result = rdd1 join rdd2
+result.collect
+res7: Array[(Char, (Int, Int))] = Array((b,(7,1)), (b,(7,2)), (b,(8,1)), (b,(8,2)))
+luckup(通过k获取v)
+----------------------
+val rdd1 = sc.parallelize(List(('a',1),('a',2),('b',3),('b',4)))
+rdd1.lookup('a')
+res9: Seq[Int] = WrappedArray(1, 2)
+
+spark核心RDD
+=====================================
+hadoop fs -put /home/hadoop/test/data /user/spark/wc/input/
+scala>
+val rdd = sc.textFile("hdfs://hadoop:9000/user/spark/wc/input/data")
+此时只是一个计划,没有执行
+rdd: org.apache.spark.rdd.RDD[String] = hdfs://hadoop:9000/user/spark/wc/input/data MapPartitionsRDD[1] at textFile at <console>:27
+再执行了count()之类的方法时候,才正式加载
+rdd.count()
+res0: Long = 8
+rdd.flatMap(line =>line.split("\t")).map(word => (word,1)).reduceByKey((a,b)=>(a+b)).collect
+简化
+sc.textFile("hdfs://hadoop:9000/user/spark/wc/input/data").flatMap(_.split("\t")).map((_,1)).reduceByKey((_+_)).collect
+和mapreduce的区别
+	在spark中,一个应用程序中包含多个job任务
+	在mapreduce中一个job是一个应用
+sc.textFile("hdfs://hadoop:9000/user/spark/wc/input/data").flatMap(_.split("\t")).map((_,1)).reduceByKey((_+_)).sortByKey(false).collect
+sortByValue
+sc.textFile("hdfs://hadoop:9000/user/spark/wc/input/data").flatMap(_.split("\t")).map((_,1)).reduceByKey((_+_)).map(x=>(x._2,x._1)).sortByKey(false).map(x=>(x._2,x._1)).collect
+
+
+官方文档:
+===================================================
+http://spark.apache.org/docs/latest/programming-guide.html
+基本概念:
+	每一spark应用App都包含一个驱动程序driver program用于运行用户主函数main和并执行各种并行计算操作在集群上
+如下:
+Dirver Program[SparkContext)<====>Cluster Manager<-->
+Worker Node1{Excutor[Cache,Task1,Task2...]}
+Worker Node2{Excutor[Cache,Task1,Task2...]}
+....
+Driver Program是一个应用程序的驱动程序
+Executor :执行器,进程,一个应用程序有很多executor,即很多Job任务,Job任务又有很多Task,每个Task都是在Executor中运行
+
+RDD概念:
+	Spark提供了一个核心抽象叫做RDD(resilient distributed dataset弹性分布式数据集)
+分区(a list of partitions):
+	RDD是一个存放数据集合,这些数据被分区partitioned在集群的各个节点上,即上面案例中:
+	rdd: org.apache.spark.rdd.RDD[String] = hdfs://hadoop:9000/user/spark/wc/input/data MapPartitionsRDD[1] at textFile at <console>:27
+并行计算(a function for computing each split):
+	RDD集合中的数据能够在每个节点上进行并行计算(operated on in parallel)
+RDD依赖(a list of dependences on ather RDD):
+	分为宽依赖和窄依赖
+	RDDa转化为RDDb,RDDb转化为RDDc,那么RDDc依赖RDDb,RDDb依赖与RDDa
+	宽依赖:类似于mapreduce中map的输出文件,要通过分区分别发给多个reduce,宽依赖中,上一步的RDD全部完成,下一步的RDD才能开始,一旦下一步的RDD挂了,需要重新执行上一步所有的RDD,这时候以免重新开始所有任务,对宽依赖中被依赖RDD进行备份
+	窄依赖:每个RDD的上下线是单线关系,下线挂掉,只需要重新启动上一个RDD,不会影响到其他的RDD
+创建RDD:
+	RDD可以被创建通过hadoop的hdfs中的文件,或者其他hadoop支持的文件系统
+	如:val rdd = sc.textFile("hdfs://hadoop:9000/user/spark/wc/input/data")
+	或者一个在driver program中存在的Scala集合
+	如:val rdd  = sc.parallelize(List("hadoop","spark","yarn","spark"))
+	或者通过其他的RDD转化而来
+	val rdd2 = rdd.flatMap(_.split("\t")
+持久化:
+	rdd.cache //执行后,RDD被持久化到内存中,(缓存到内存中)再次调用这个RDD,速度会很快
+	方便用户可以高效重复使用RDD
+容错:
+	RDD可以自动进行数据恢复,lineage
+可选:
+	a Partitioner for key-value RDDs(is hash-partitioned)
+	对于key-value的RDD可指定一个partitioner,告诉它如何分片,常用的有hash,range
+	a list of preferred location(s) to compute each split on (block locations for an HDFS file)
+	要运行的计算/执行最好的哪(几)个机器上运行,数据本地性.如:
+	hadoop默认有三个位置,或者spark cache到内存可能通过StorageLevel设置了多个副本,所以一个partition可能返回多个最佳位置.
+	
+部署Deploying
+======================================
+http://spark.apache.org/docs/latest/cluster-overview.html
+图示概括如下:
+Dirver Program[SparkContext)<====>Cluster Manager<-->
+Worker Node1{Excutor[Cache,Task1,Task2...]}
+Worker Node2{Excutor[Cache,Task1,Task2...]}
+概念:
+Application, Application jar, Driver program, Cluster manager, Deploy mode , Worker node , Executor , Task , job , Stage 
+Spark运行架构(Spark Running Architecture)
+--------------------------------
+1.构建Spark Application 运行环境;
+在Driver Program 中新建SparkContext(包含sparkcontext的程序成为Driver Program);Spark Application运行的表现方式为:在集群上运行一组读一的executor进程,这些进程由sparkcontext来协调;
+例如启动一个spark-shell就是一个app,在http://hadoop:8080/中就可以查看到运行的app有如下内容:
+app-20160608151105-0000 (kill)Spark shell 2 4.0GB 2016/06/08 15:11:05  hadoop RUNNING 3.8 h
+2.Sparkcontext向资源管理器申请运行Executor资源,并启动StandaloneExcutorBackend,executor向sparkcontent申请task;
+集群通过SparkContext链接到不同cluster mananger(standalone,yarn,mesos),cluster manager为运行应用的Executor分配资源,一旦连接建立后,Spark每个Application就会获得各个节点上的Executor(进程),每个Application都有自己独立的executor进程,Executor才是真正运行WorkNode上的工作进程,他们为应用来计算或者存储数据
+3.Sparkcontext获取到executor之后,Application的应用代码讲会被发送到各个executor;
+4.Sparkcontext构建RDD DAG图,将RDD DAG图分解为Stage DAG图,将Stage提交给TaskScheduler,最后有TaskScheduler将Task发送给Executor运行.
+5.Task在Executor上运行,运行完毕后释放嗖又资源.
+
+提交一个应用程序Submittion Applications
+-------------------------
+spark-submint队一个application进行提交.
+方式如下:
+./bin/spark-submit \
+  --class <main-class>
+  --master <master-url> \
+  --deploy-mode <deploy-mode> \
+  --conf <key>=<value> \
+  ... # other options
+  <application-jar> \
+  [application-arguments]
+MasterURL
+
+
+	spark集群默认调度job的机制
+	-------------------------------
+	FIFO: 队列模式(启动多个spark-shell后只有在第一个spark-shell的应用中可以运行work)
+	一个spark-shell是一个app应用,运行在spark集群之上,这个app中含有在每个worker节点上有对应的executor
+	[application(1) ----executor(n),executor(1)----worker()]
+	val file = sc.textFile("/../...")这个操作会(每个worker进程从本地)加载指定路径下的文本,将文本作为rdd元素.
+slark-shell练习
+-------------------------------------------------------
+hadoop/sbin/start-dfs.sh
+spark/sbin/start-all.sh 
+bin/spark-shell --master spark://hadoop:7077
+hadoop fs -tail /data/data
+date id-cooke searchname linktop linkdnumber addr
+scala
+val data = sc.textFile("hdfs://hadoop:9000/data/data")
+data.count //4kw rows
+data cache	//放入内存中
+data.count //这时候时间非常短
+查询20111230010101之前的点击量filter中的(0)代表返回第一列
+data.map(_.split('\t')(0)).filter(_ < "20111230010101").count
+查询点击量排名第一的网站搜索次数
+data.map(_.split('\t')(3)).filter(_.toInt == 1).count
+查询搜索到排名第一的网站并链接进去的点击量
+data.map(_.split('\t')).filter(_(3).toInt == 1).filter(_(4).toInt == 1).count
+查询在搜索框中搜索百度的数量
+data.map(_.split('\t')).filter(_(2).contains("baidu")).count
+	
+spark编译
+-------------------------
+	scala: sbt simple build tool,编译
+		很慢,单线程,不推荐
+	java:maven
+	scala:maven
+	eclipse:maven
+	使用maven编译spark应用(java语言)
+	---------------------
+	1.创建目录,存放项目		mkdir myspark
+	2.mvn初始化命令,进行项目的初始化,创建相应的目录和配置文件
+	 mvn archetype:generate -DarchetypeGroupId=org.apache.maven.archetypes -DgroupId= -DartifactId=
+	 -Dfilter=org.apache.maven.archetypes:maven-archetype-auickstart
+	3.Build Spark App准备java源文件
+	使用Maven build(推荐Java版)
+	准本java源文件到指定目录中,就是项目java包下
+	cp ../JavaWorldCount.java ../yourDir
+	修改
+
+
+
+
+
