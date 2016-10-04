@@ -1,0 +1,300 @@
+countByKey()
+  /**
+   * Count the number of elements for each key, collecting the results to a local Map.
+   *
+   * Note that this method should only be used if the resulting map is expected to be small, as
+   * the whole thing is loaded into the driver's memory.
+   * To handle very large results, consider using rdd.mapValues(_ => 1L).reduceByKey(_ + _), which
+   * returns an RDD[T, Long] instead of a map.
+   */
+val scores = Array(Tuple2(1,100),Tuple2(1,100),Tuple2(2,100),Tuple2(2,80),Tuple2(3,90))
+val scorerdd = sc.parallelize(scores)
+val resoult = scorerdd.countByKey()
+
+数据持久化的action操作
+saveAsTextFile-->saveAsHadoopFile
+ Save this RDD as a text file, using string representations of elements.
+   /**
+   * Output the RDD to any Hadoop-supported file system, using a Hadoop `OutputFormat` class
+   * supporting the key and value types K and V in this RDD.
+   */
+持久化的第二部分:persist
+  某个步骤计算特别费时,
+  计算链条特别长的情况,
+  checkpoint所在的rdd也一定要persist(因为checkpoint会重新触发一个job,如果persist会导致checkpoint重新计算),
+  shuffle之后(shuffle要进行网络传输,persist防止重新计算),
+  shuffle之前(框架默认把数据持久化的本地磁盘)
+rdd.persist (persist是lazy级别,unpersist是eager级别)
+Mark this RDD for persisting using the specified level.
+private var storageLevel: StorageLevel = StorageLevel.NONE
+object StorageLevel {
+  val NONE = new StorageLevel(false, false, false, false)
+  val DISK_ONLY = new StorageLevel(true, false, false, false)
+  val DISK_ONLY_2 = new StorageLevel(true, false, false, false, 2)
+  val MEMORY_ONLY = new StorageLevel(false, true, false, true)
+  val MEMORY_ONLY_2 = new StorageLevel(false, true, false, true, 2)
+  val MEMORY_ONLY_SER = new StorageLevel(false, true, false, false)
+  val MEMORY_ONLY_SER_2 = new StorageLevel(false, true, false, false, 2)
+  val MEMORY_AND_DISK = new StorageLevel(true, true, false, true)
+  val MEMORY_AND_DISK_2 = new StorageLevel(true, true, false, true, 2)
+  val MEMORY_AND_DISK_SER = new StorageLevel(true, true, false, false)
+  val MEMORY_AND_DISK_SER_2 = new StorageLevel(true, true, false, false, 2)
+  val OFF_HEAP = new StorageLevel(false, false, true, false)
+两份副本优点:空间换时间,如果第一份内存副本oom或者挂掉,第二份可以直接使用
+MEMORY_AND_DISK尽可能减少oom的可能性(任何情况都会出现oom)
+rdd.cache
+cache之后一定不能立即有其他算子,unpersist取消缓存
+缓存操作后会将数据持久到某(多个,或者所有)一个worker的内存中,对于cache后的数据在一个机器内存中,一般情况下再进行操作是在本地执行,如果worker资源不够则要进行网络传输到其他机器中
+广播:
+原因:(大变量,join,减少Tesk数据传输和数据冗余,节省内存从而减小OOM几率,状态,集群消息,共享,减少通信和网络传输,同步)
+广播是由Driver发给当前Application分配的所有Executor的内存级别的全局只读变量,Executor中的线程池中的线程共享该全局变量,极大的减少了网络传输(否则的化每个Task都要传输一次该变量)并极大的节省了内存,当然也隐形的提高了cpu的有效工作
+广播流程图:
+使用传统的网络传输:
+Driver:number=3 -->网络传输慢(向每个Task分发)-->Executor: Task1,Task2,Task3,Task4有四个number的数据副本(内存占用大,如果变量比较大,则极易出现OOM)
+使用广播:
+Driver:number=3-->Broadcast到Executor的内存中(一份)-->Executor的内存中number=3-->Task1,Task2,Task3...共享Executor唯一的一份广播变量,极大的减少了网络传输和内存消耗
+val number = 10
+val broadcastNumber = sc.broadcast(number)//将number进行广播
+broadcastNumber: org.apache.spark.broadcast.Broadcast[Int] = Broadcast(1)
+##创建rdd,Tesk使用广播变量
+val data = sc.parallelize(1 to 10)
+val bn = data.map(_* broadcastNumber.value)
+
+累加器:Accumulator:对于Executor只能修改但不可读,只对Driver可读,记录集群全局的唯一的状态非常关键,如:redis的技术(重量级),
+Accumulator核心在Driver上,Executor上可以累加,实际的Task运行的时候,每次都可以保证修改之后
+val sum = sc.accumulator(0)//创建累加器
+val data = sc.parallelize(1 to 100)
+data.foreach(item => sum +=item)//Executor具体访问累加器,只能Tesk进行add
+println(sum)//然后累加器结果为5050
+val result = data.foreach(item => sum +=item)//第二次Tesk累加
+println(sum)//结果5065
+val data = sc.parallelize(1 to 5)
+
+  /**
+   * Create an [[org.apache.spark.Accumulator]] variable of a given type, which tasks can "add"
+   * values to using the `+=` method. Only the driver can access the accumulator's `value`.
+   */
+   
+排序:
+基础排序算法,二次排序算法,更高级别排序算法,排序算法内幕
+sc.setLogLevel("WARN")
+sc.textFile("file:///home/hadoop/test/data/data").flatMap(_.split(" ")).map(word=>(word,1)).reduceByKey(_+_,1).map(pair => (pair._2,pair._1)).sortByKey(false).map(pair => (pair._2,pair._1)).collect()
+OrderedRDDFunctions.sortByKey()
+源代码:
+  /**
+   * Sort the RDD by key, so that each partition contains a sorted range of the elements. Calling
+   * `collect` or `save` on the resulting RDD will return or output an ordered list of records
+   * (in the `save` case, they will be written to multiple `part-X` files in the filesystem, in
+   * order of the keys).
+   */
+def sortByKey(ascending: Boolean = true, numPartitions: Int = self.partitions.length)
+      : RDD[(K, V)] = self.withScope
+  {
+    val part = new RangePartitioner(numPartitions, self, ascending)
+    new ShuffledRDD[K, V, V](self, part)
+      .setKeyOrdering(if (ascending) ordering else ordering.reverse)
+  }
+ ===> 
+  class RangePartitioner[K : Ordering : ClassTag, V](
+    partitions: Int,
+    rdd: RDD[_ <: Product2[K, V]],
+    private var ascending: Boolean = true)
+  extends Partitioner {...
+  ===>
+  class ShuffledRDD[K: ClassTag, V: ClassTag, C: ClassTag](
+    @transient var prev: RDD[_ <: Product2[K, V]],
+    part: Partitioner)
+  extends RDD[(K, C)](prev.context, Nil) {...
+通过hadoop:4040查看stage,以及每个stage的Task数量
+二次排序:
+第一次排序key相同,一般可能借助二次排序对第二列进行排序
+参考eclipse的SecondarySort类java代码,idea的scala代码
+
+
+TopN算法:
+参考idea代码TopNBasic
+参考eclipse代码TopNGroup,在list中sort算法如下:
+	Integer[] top5 = new Integer[5];// 保存Top5的数据本身
+	String groupedKey = groupedData._1;// 获取分组的组分名
+	Iterator<Integer> groupedValue = groupedData._2.iterator();// 获取每组的内容集合
+	while (groupedValue.hasNext()) {// 查看是否有下一个元素,如果有继续循环
+		Integer value = groupedValue.next();// 获取当前循环的元素本身的内容
+		for (int i = 0; i < 5; i++) {//具体实现top 5
+			if (top5[i] == null) {
+				top5[i] = value;//填充top5[i]数组
+				break;//填充完成直接跳出
+			//如果有top5[i]的值,则对value进行比较排序,如果value比top5[i]小,则i++进入下一个for循环
+			} else if (value > top5[i]) {
+				for (int j = 4; j > i; j--) {//从后向前,递归比较
+					top5[j] = top5[j - 1];//将原来值向后移动
+				}
+				top5[i] = value;//将value赋值给比较后最后的位置
+				break;
+			}
+		}
+	}
+	return new Tuple2<String, Iterable<Integer>>(
+			groupedKey, Arrays.asList(top5));
+RangePartitioner主要是依赖的RDD的数据划分不同的范围,RDD数据划分成不同的范围,关键的地方是不同的范围是有许多(一种算法:水塘抽样)
+Google面试题:如何在个不确定数据规模的范围内进行排序
+目的:从集合中选取特定的样,集合不确定或者特别大(也就是不扫面全部集合)
+思想:
+RangePartitioner以前是运行了两个job,现在没有.是因为使用了水塘抽样算法
+
+HashPartitioner的弊端:可能导致数据倾斜(极端情况下:可能某一个(多个)分区拥有所有rdd数据)
+
+RangePartitioner重要作用:除了使结果保持有序的基石,最为重要的是保证partition中的每个数据量是均匀的
+RangePartitioner中的代码:
+ 	// This is the sample size we need to have roughly balanced output partitions, capped at 1M.
+ val sampleSize = math.min(20.0 * partitions, 1e6)
+      // Assume the input partitions are roughly balanced and over-sample a little bit.
+      ##乘三的目的保证数据量特别小的分区能够抽取到足够的数据,同时保证数据量特别大的分区能够二次采样
+      val sampleSizePerPartition = math.ceil(3.0 * sampleSize / rdd.partitions.size).toInt
+      //采样sketch,_._1是key排序
+      val (numItems, sketched) = RangePartitioner.sketch(rdd.map(_._1), sampleSizePerPartition)
+      if (numItems == 0L) {
+        Array.empty
+      } else {
+        // If a partition contains much more than the average number of items, we re-sample from it
+        // to ensure that enough items are collected from that partition.
+        val fraction = math.min(sampleSize / math.max(numItems, 1L), 1.0)
+        val candidates = ArrayBuffer.empty[(K, Float)]
+        val imbalancedPartitions = mutable.Set.empty[Int]
+        sketched.foreach { case (idx, n, sample) =>
+          if (fraction * n > sampleSizePerPartition) {
+            imbalancedPartitions += idx
+          } else {
+            // The weight is 1 over the sampling probability.
+            val weight = (n.toDouble / sample.size).toFloat
+            for (key <- sample) {
+              candidates += ((key, weight))
+            }
+          }
+        }
+###其中
+ /**
+   * Sketches the input RDD via reservoir sampling on each partition.
+   *
+   * @param rdd the input RDD to sketch
+   * @param sampleSizePerPartition max sample size per partition
+   * @return (total number of items, an array of (partitionId, number of items, sample))
+   */
+  def sketch[K : ClassTag](
+      rdd: RDD[K],
+      sampleSizePerPartition: Int): (Long, Array[(Int, Long, Array[K])]) = {
+    val shift = rdd.id
+    // val classTagK = classTag[K] // to avoid serializing the entire partitioner object
+    val sketched = rdd.mapPartitionsWithIndex { (idx, iter) =>
+      val seed = byteswap32(idx ^ (shift << 16))
+      val (sample, n) = SamplingUtils.reservoirSampleAndCount(
+        iter, sampleSizePerPartition, seed)
+      Iterator((idx, n, sample))
+    }.collect()
+    val numItems = sketched.map(_._2).sum
+    (numItems, sketched)
+  }
+这里使用了水塘采样:
+  /**
+   * Reservoir sampling implementation that also returns the input size.
+   *
+   * @param input input size
+   * @param k reservoir size
+   * @param seed random seed
+   * @return (samples, input size)
+   */
+  def reservoirSampleAndCount[T: ClassTag](
+      input: Iterator[T],
+      k: Int,
+      seed: Long = Random.nextLong())
+    : (Array[T], Long) = {
+    val reservoir = new Array[T](k)
+    // Put the first k elements in the reservoir.
+    var i = 0
+    while (i < k && input.hasNext) {
+      val item = input.next()
+      reservoir(i) = item
+      i += 1
+    }
+
+    // If we have consumed all the elements, return them. Otherwise do the replacement.
+    if (i < k) {
+      // If input size < k, trim the array to return only an array of input size.
+      val trimReservoir = new Array[T](i)
+      System.arraycopy(reservoir, 0, trimReservoir, 0, i)
+      (trimReservoir, i)
+    } else {
+      // If input size > k, continue the sampling process.
+      var l = i.toLong
+      val rand = new XORShiftRandom(seed)
+      while (input.hasNext) {
+        val item = input.next()
+        val replacementIndex = (rand.nextDouble() * l).toLong
+        if (replacementIndex < k) {
+          reservoir(replacementIndex.toInt) = item
+        }
+        l += 1
+      }
+      (reservoir, l)
+    }
+  }
+  
+回到RangePartition中:
+def determineBounds[K : Ordering : ClassTag](
+      candidates: ArrayBuffer[(K, Float)],
+      partitions: Int): Array[K] = {
+    val ordering = implicitly[Ordering[K]]
+    val ordered = candidates.sortBy(_._1)
+    val numCandidates = ordered.size
+    val sumWeights = ordered.map(_._2.toDouble).sum
+    val step = sumWeights / partitions
+    var cumWeight = 0.0
+    var target = step
+    val bounds = ArrayBuffer.empty[K]
+    var i = 0
+    var j = 0
+    var previousBound = Option.empty[K]
+    while ((i < numCandidates) && (j < partitions - 1)) {
+      val (key, weight) = ordered(i)
+      cumWeight += weight
+      if (cumWeight >= target) {
+        // Skip duplicate values.
+        if (previousBound.isEmpty || ordering.gt(key, previousBound.get)) {
+          bounds += key
+          target += step
+          j += 1
+          previousBound = Some(key)
+        }
+      }
+      i += 1
+    }
+    bounds.toArray
+  }
+}
+###getPartition使用二分算法(binary search method),确定具体的Key属于那个分区,返回分区的Id
+  def getPartition(key: Any): Int = {
+    val k = key.asInstanceOf[K]
+    var partition = 0
+    if (rangeBounds.length <= 128) {
+      // If we have less than 128 partitions naive search
+      while (partition < rangeBounds.length && ordering.gt(k, rangeBounds(partition))) {
+        partition += 1
+      }
+    } else {
+      // Determine which binary search method to use only once.
+      partition = binarySearch(rangeBounds, k)
+      // binarySearch either returns the match location or -[insertion point]-1
+      if (partition < 0) {
+        partition = -partition-1
+      }
+      if (partition > rangeBounds.length) {
+        partition = rangeBounds.length
+      }
+    }
+    if (ascending) {
+      partition
+    } else {
+      rangeBounds.length - partition
+    }
+  }
+  
+

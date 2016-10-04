@@ -1,0 +1,105 @@
+Task执行原理流程图
+Task执行内幕源码解密
+Task执行结果在Driver上处理解密
+
+Executor会通过TaskRunner在ThreadPool来运行具体的Task,TaskRUnner内部会做一些准备工作,例如反序列化Task,然后通过网络来获取需要的文件,Jar都能
+-->运行Thread的run方法,导致Task的runTask被调用来小hi宁具体的业务逻辑处理
+
+==>在Task的runTask内部会调用RDD的iterator()方法,该方法就是我们针对当前Task所对用的Partition进行计算的关键之所在,在具体的处理内容会迭代Parititon的元素并交给我们自定义的function进行处理,runTask有两种实现:ShuffleMapTask和ResaultTask
+
+-->ShuffleMapTask.runTask()在计算具体的Partition之后,实际上会通过ShuffleManager获得的ShuffleWriter把当前Task计算的结果根据具体的ShuffleManager实现来写入到具体的文件.操作完成后会把MapStatus发送给DAGScheduler-->(把MapStatus汇报给MapOutputTracker)
+-->Driver[DAGScheduler(MapOutputTracker]
+-->(MapOutputTracker会把ShuffleMapTask执行结果交给ResaultTask)-->ResaultTask:根据前面Stage的执行结果进行Shuffle产生整个Job最后的结果
+
+
+一:Task执行结果处理及原理流程图和源码解密:
+	1.当Driver中的(Standalone模式)CoarseGrainedSchedulerBackend给CoarseGrainedExecutorBackend发送LaunchTask后,CoarseGrainedExecutorBackend收到消息,首先会反序列化TaskDescription:
+	CoarseGrainedExecutorBackend.receive(){
+    case LaunchTask(data) =>
+        val taskDesc = ser.deserialize[TaskDescription](data.value)
+	2.Executor会通过launchTask来执行Task;
+        executor.launchTask(this, taskId = taskDesc.taskId, attemptNumber = taskDesc.attemptNumber,
+          taskDesc.name, taskDesc.serializedTask)
+      }
+		-->def launchTask(
+		  context: ExecutorBackend,
+		  taskId: Long,
+		  attemptNumber: Int,
+		  taskName: String,
+		  serializedTask: ByteBuffer): Unit = {
+	3.Executor会通过TaskRunner在ThreadPool来运行具体的Task,在TaskRunner的run方法TaskRuner中首先会通过调用statusUpdata给Driver发信息汇报自己点状态说明自己是RUNNING状态
+    Executor.launchTask(){
+    val tr = new TaskRunner(context, taskId = taskId, attemptNumber = attemptNumber, taskName,
+      serializedTask)
+	-->class TaskRunner.run(){
+		 execBackend.statusUpdate(taskId, TaskState.RUNNING, EMPTY_BYTE_BUFFER)
+	4.TaskRunner内部会做一些准备工作:例如反序列化Task的依赖:
+    val (taskFiles, taskJars, taskBytes) = Task.deserializeWithDependencies(serializedTask)
+    然后是通过网络下载这些依赖
+    updateDependencies(taskFiles, taskJars)
+	5.然后是反序列化Task本身
+    task = ser.deserialize[Task[Any]](taskBytes, Thread.currentThread.getContextClassLoader)
+	6.调用反序列化后的Task.run方法来执行任务并获得执行结果
+         val (value, accumUpdates) = try {
+          val res = task.run(
+            taskAttemptId = taskId,
+            attemptNumber = attemptNumber,
+            metricsSystem = env.metricsSystem)
+          threwException = false
+          res
+	其中Task.run方法调用时候会导致Task的抽象方法runTask()调用;
+	对于ShuffleMapTask,首先要对RDD以及其依赖关系进行反序列化:
+	
+	Task.run(){
+		.....
+		(runTask(context), context.collectAccumulators())
+	}
+	-->Task.runTask(context: TaskContext): T
+	在Task的runTask内部会调用RDD的iterator()方法,该方法就是我们针对当前Task所定影的partition进行计算的关键之所在,在处理的内部会迭代Partition的元素并交给我们自定义的function进行处理!
+	例如:ShuffleMapTask.runTask(){
+	val (rdd, dep) = ser.deserialize[(RDD[_], ShuffleDependency[_, _, _])](
+	.....
+	writer.write(rdd.iterator(partition, context).asInstanceOf[Iterator[_ <: Product2[Any, Any]]])
+	
+	对于Shuffle,首先要对RDD以及其依赖关心进行反序列化,同上代码
+	最终计算会调用RDD的compute方法:
+	-->RDD.iterator(){
+		computeOrReadCheckpoint(split, context)
+		-->RDD.compute(split: Partition, context: TaskContext)
+		-->TaskContextImpl类
+	具体计算的时候有具体的RDD,例如MapPartitionRDD的compute方法:
+		compute(split: Partition, context: TaskContext): Iterator[U] =
+    f(context, split.index, firstParent[T].iterator(split, context))
+    其中的f就是我们在当前的Stage中计算具体Partition的业务逻辑代码;
+    
+    对于ResaultTask.runTask():代码
+    7.把执行结果序列:
+    val serializedResult: ByteBuffer = {...
+    并根据大小判断不同的结果传回给Driver的方式
+     if (maxResultSize > 0 && resultSize > maxResultSize) {...
+     }else if (resultSize >= akkaFrameSize - AkkaUtils.reservedSizeBytes) {...
+     }else {..
+     }
+     execBackend.statusUpdate(taskId, TaskState.FINISHED, serializedResult)
+	8.CoarseGrainedExecutorBackend给DriverEndpoint发送StatusUpdate来传输执行结果,DriverEndpoint会把执行结果传递给TaskSchedulerImpl处理,然后交给TaskResultGetter内部通过线程去分别处理Task执行成功和失败时候的不同情况,然后告诉DAGScheduler任务处理结束的状况
+     -->CoarseGrainedExecutorBackend.statusUpdate(){
+	 case Some(driverRef) => driverRef.send(msg)
+	 -->CoarseGrainedSchedulerBackend.DriverEndpoint.receive(){
+      case StatusUpdate(executorId, taskId, state, data) =>
+        scheduler.statusUpdate(taskId, state, data.value)
+     	-->TaskSchedulerImpl.statusUpdate()
+	2.运行Thread的run方法,导致Task的runTask被调用来执行具体的业务逻辑处理
+	
+	
+	补充说明:
+	1.在执行具体的Task的业务逻辑前会进行三次反序列化:分别是
+	a)TaskDescription的反序列化
+	b)反序列化Task的依赖
+	b)Task的反序列化
+	c)RDD的反序列化
+	2.在Spark1.6中AkkFrameSize是128MB,所以可以广播非常大的任务,而任务的执行结果可以最大达到1Gb;
+	val serializedResult: ByteBuffer = {
+		if (maxResultSize > 0 && resultSize > maxResultSize) {
+		 // Limit of bytes for total size of results (default is 1GB)
+	 	 -->private val maxResultSize = Utils.getMaxResultSize(conf)
+

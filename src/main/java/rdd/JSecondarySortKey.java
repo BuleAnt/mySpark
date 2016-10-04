@@ -1,4 +1,4 @@
-package core;
+package rdd;
 
 import java.io.Serializable;
 

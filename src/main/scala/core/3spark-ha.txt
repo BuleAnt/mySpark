@@ -1,0 +1,11 @@
+Master(active)<-->zookeeper<-->Master(standby)
+Dirver<-->Master
+Master<-->worker<-->executor<-->Driver
+资源主要指:Memory,CPU
+做HA,集群的元数据保存在zookeeper中,zookeeper中包含的元数据为:所有的Worker,Driver,Application,当Active挂掉后,zookeeper会根据全局状态将选举一个standby转换为Active,通过zookeeper保存的元数据(获取集群的状态信息恢复Worker,Driver,Application)进行恢复,在恢复完成之后,此时被选为Leader的Master才会从Standby到Recovery再到Active级别,产生对外的集群服务
+也就是说在standby转换为Active中间,不提供外部服务,内部业务情况的运行不会被打断,Spark RDD是粗粒度的:程序运行之前已经Master申请过资源,在运行App时候不需要关系资源的分配,所以Driver与Worker之间的通信一般不需要Master参与,所以切换Actvie过程并不影响Application的运行
+	粗粒度:任务提交后就分配资源,缺点:浪费资源
+	细粒度:在任务启动时候分配资源,缺点:启动慢,在切换Active时候影响App运行
+
+做HA步骤:
+下载安装zookeeper,

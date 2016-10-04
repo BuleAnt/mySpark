@@ -1,0 +1,179 @@
+Spark JobHistory与Spark on YARN 
+1. Spark App Monitoring监控
+2. Spark JobHistory
+3. Hadoop YARN部署与工作原理
+4. Spark on YARN
+==========================================================
+
+1. Spark App Monitoring监控
+-----------------------------
+启动一个单机spark-shell
+bin/spark-shell --master local[2]
+INFO SparkUI: Started SparkUI at http://192.168.2.3:4040
+这个是Spark shell application UI
+启动hdfs
+start-dfs.sh
+然后在spark-shell中读取hfds文件
+val textRdd = sc.textFile("hdfs://hadoop:9000/user/spark/wc/input/data")
+textRdd.count
+然后在http://192.168.2.3:4040中可以看到该spark shell的app的各项信息
+
+    A list of scheduler stages and tasks
+    A summary of RDD sizes and memory usage
+    Environmental information.
+    Information about the running executors
+
+Web Interfaces
+每个SparkContext都会家自爱一个Web UI,默认端口为4040,如果有多个spark-shell运行在同一个host上,他们讲分别绑定单独的post上,如4041,4042...,启动时候将会有一下警告信息: WARN Utils: Service 'SparkUI' could not bind on port 4040. Attempting port 4041.如果和另一个spark-shell在同一个目录下,讲会报错如下:Another instance of Derby may have already booted the database /.../...
+在另一个SparkCOntext上也可以运行程序
+
+2. Spark JobHistory
+-----------------------------
+现在如果运行一个spark程序,错误或者完成后,我们都无法通过监控等途径查看日志信息,即便启动standalone集群模式,通过8080端口webUI,也只有一下信息 Event logging is not enabled
+No event logs were found for this application! To enable event logging, set spark.eventLog.enabled to true and spark.eventLog.dir to the directory to which your event logs are written.
+链接地址为:http://spark.apache.org/docs/latest/monitoring.html
+官方文档:
+Viewing After the Fact
+Spark的standalone模式集群manager有自己的web UI(8080),如果一个app已经记录log了它生命周期过程lifetime course的的事件event,然后Standalone master的web UI将自动
+重新呈现应用程序的UI,在app完成后.如果spark运行在Mesos或者YARN上,也可以实现以上,为了提供这个app的even log,你可以启动一个history server通过执行一下命令:
+./sbin/start-history-server.sh
+Configuration option基本配置:
+The history server can be configured as follows:
+SPARK_HISTORY_OPTS	spark.history.* configuration options for the history server (default: none). 
+选项如下:
+spark.history.provider	 	org.apache.spark.deploy.history.FsHistoryProvider 	
+spark.history.fs.logDirectory	file:/tmp/spark-events
+spark.history.fs.update.interval 	10s
+spark.history.retainedApplications 	50
+spark.history.ui.port	 	18080
+spark.history.kerberos.enabled 	false
+实例:
+spark-evn.sh
+export SPARK_HISTORY_OPTS="-Dspark.history.fs.logDirectory=hdfs://hadoop:9000/user/spark/history"
+其他不必配置,根据第一段的说明,还需配置set spark.eventLog.enabled to true and spark.eventLog.dir,这个在spark-default.sh中
+spark.eventLog.enabled           true
+spark.eventLog.dir               hdfs://hadoop:9000/user/spark/history
+通过对spark UI配置对日志压缩配置:
+http://spark.apache.org/docs/latest/configuration.html#spark-ui
+spark-default.sh
+spark.eventLog.compress 	true
+spark.eventLog.dir 	hdfs://hadoop:9000/user/spark/history
+spark.eventLog.enabled 	true
+然后启动HistoryServer
+./sbin/start-history-server.sh
+http://192.168.2.3:18080/
+启动一个spark-shell,运行一个任务,然后关闭spark-shell,将会在8080以及18080端口查看到运行结束的spark-shell应用的详细信息
+
+3. Hadoop YARN部署与工作原理
+-----------------------------------------
+YARN架构复习
+1) client提交一个app到RM,RM对NM下达命令,监控NM状态,NM向RM汇报资源,应用信息
+client-->Resource Manager<==>Node Manager 1,2,3...--->
+2) RM对NM下发命令后,NM在本节点启动一个AM应用程序MR APP,AM向RM申请资源Container
+Node Manager1-->App Master-->Container-->RM-->
+3) RM是一点点的发送Resource给AM,不是一次全给够,AM获取到资源后,分配资源给Task1,2,..
+每个Task可能分布在不同的节点,那么AM将会将资源分发到对应的NM上,有NM来执行Task
+MR APP Master(MapReduce为例,MR的Application Master)-->Task1,2,3,...--->NM1,2,3..
+从每个角色的角度来看:
+RM:处理client请求,启动监控AM,资源分配和调度
+NM:管理单个节点资源container和任务task,处理RM的命令,AM的命令(启动AM,Task)
+AM:数据切分(分配任务Task),为App请求资源container并分配给内部任务,任务的监控和容错
+Container:任务运行环境(JVM)的抽象,封装了CPU,内存等多为资源以及环境变量,启动命令等任务运行相关信息
+Yarn双层调度:RM-->AM-->Task
+资源预留:一个AM申请的资源过大,会慢慢积累,不像Oracle中的All or Nothing,要么一次性给完,要么就不给
+其他可选信息:
+多类型:cpu+内存
+多种资源调度:FIFO,Fair,Capacity
+多租户资源调度Schecluder:比例,层级,资源抢占
+隔离:Cpu关系着App的快慢,内存却关系着生死.thread(线程),Cgroup
+调度语义:一个节点/机架上特定资源,黑名单,归还Resources
+不支持:任意节点,特定的Resources,一组特定的Resource,超细的,动态的
+MR2 on Yarn
+MR时间长,开销大,效率低.流程为client-->RM-->NM-->AM-->Task[Map,Reduce](查看任务,并请求资源)-->
+(请求资源)RM-->AM(分配资源)-->NM(分配资源和任务)-->Task(NM上启动Task)
+优化MR:多个MR使用依赖关系,合并一个DAG,技术:缓冲池,AMPoolServer,Container,预期定,重用
+
+Spark on Yarn
+---------------------------
+参考MR2 on Yarn,Spark on Yarn流程也是类似的:
+1) Spark Yarn Client向RM提交一个App,RM为App创建一个App Master在NM上
+SPark Yarn Client-->RM-->NM-->AM
+App Master管理App(driver program),SparkContext通过任务调度(DAG Scheduler,YarnClusterScheduler)向RM申请资源Container
+AM-->SparkContext-->[DAG Scheduler,(YarnClusterScheduler)]-->RM-->AM{SC[containner]}-->
+SC(SparkContext)(这里另一种说法:RM直接讲Containner发到NM上)将Container发给相应的NM上,命令NM启动一个Executor
+RM/SC[containner]-->NM-->Executor
+
+复习Spark submit提交:
+bin/spark-submit --help
+Usage: spark-submit [options] <app jar | python file> [app arguments]
+  --master MASTER_URL         spark://host:port, mesos://host:port, yarn, or local.
+  --deploy-mode DEPLOY_MODE   Whether to launch the driver program locally ("client") or on one of the worker machines inside the cluster ("cluster")
+部署模式,一个spark应用会有一个Diver program,这个模式主要是对dirver program,如果driver program是client(本地模式),或者加载driver program在cluster上的某一个worker机器上,使用"cluster"来表示 
+官方文档:
+http://spark.apache.org/docs/latest/submitting-applications.html
+官方模板:
+./bin/spark-submit \
+--class <main-class> \
+--master <master-url> \
+--deploy-mode <deploy-mode> \
+--conf <key>=<value> \
+... # other options
+<application-jar> \
+[application-arguments]
+  
+bin/spark-submit  \
+--class spark.example.WordCount \
+--deploy-mode cluster \
+~/test/spark/spark_wordcount/target/scala-2.10/wordcount_2.10-1.0.0.jar \
+spark://hadoop:7077 \
+/user/spark/wc/input/data \
+/user/spark/wc/output4 \
+--worker-cores 2 \
+--worker-memory 2g 
+bin/spark-submit --master yarn  ~/test/spark/spark_wordcount/target/scala-2.10/wordcount_2.10-1.0.0.jar spark://hadoop:7077 /user/spark/wc/input/data /user/spark/wc/output5
+
+bin/spark-submit \
+~/test/spark/spark_wordcount/target/scala-2.10/wordcount_2.10-1.0.0.jar \
+spark://hadoop:7077 \
+/user/spark/wc/input/data \
+/user/spark/wc/output4 
+实例:
+bin/spark-submit \
+--class org.apache.spark.examples.SparkPi \
+lib/spark-examples-1.6.1-hadoop2.7.2.jar \
+10
+这个任务是提交是在Spark本地模式的local上运行的
+bin/spark-submit \
+--class org.apache.spark.examples.SparkPi \
+--deploy-mode cluster \
+lib/spark-examples-1.6.1-hadoop2.7.2.jar \
+10
+这时候运行一个Driver,这个Driver将在集群的某一个worker机器上运行,这个worker上运行着App Master,通过webUI可以看到Running Drivers (1) 
+driver-20160609113521-0000 org.apache.spark.examples.SparkPi RUNNING 1 4.0GB
+这个dirver将永远完成不了,是由于没有分配cpu
+
+Spark on Yarn
+-----------------------
+启动yarn,执行spark-submint如下
+bin/spark-submit \
+--master yarn \
+--class org.apache.spark.examples.SparkPi \
+lib/spark-examples-1.6.1-hadoop2.7.2.jar \
+10
+
+
+
+
+
+
+export HADOOP_CONF_DIR=/opt/single/hadoop-2.7.2/etc/hadoop
+bin/spark-submit --class com.start.spark.SparkYarn --master yarn-cluster --executor-memory 3g --executor-cores 4 /opt/app/jar/sparkApp_jar/sparkApp.jar hdfs://hadoop:9000/user/spark/testyarn/input/data hdfs://hadoop:9000/user/spark/testyarn/result
+##官方演示
+bin/spark-submit --class org.apache.spark.examples.SparkPi --master yarn --deploy-mode cluster --driver-memory 4g --executor-memory 2g --executor-cores 4 lib/spark-examples*.jar 10
+
+bin/spark-submit --class com.start.spark.SparkYarn --master yarn --deploy-mode cluster --driver-memory 4g --executor-memory 3g --executor-cores 4 /opt/app/jar/sparkApp_jar/sparkApp.jar hdfs://hadoop:9000/user/spark/testyarn/input/data hdfs://hadoop:9000/user/spark/testyarn/result
+
+bin/spark-submit --class com.start.spark.SparkYarn --master yarn --deploy-mode cluster --driver-memory 4g --executor-memory 3g --executor-cores 4 /opt/app/jar/scala-study.jar
+
+Stream
+bin/spark-submit --class com.start.spark.NetworkCount --master yarn --deploy-mode client --driver-memory 4g --executor-memory 3g --executor-cores 4 /opt/app/jar/scala-study.jar hadoop 9999 11

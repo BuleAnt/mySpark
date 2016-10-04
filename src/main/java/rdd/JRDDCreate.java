@@ -1,4 +1,4 @@
-package core;
+package rdd;
 
 
 import org.apache.log4j.Level;

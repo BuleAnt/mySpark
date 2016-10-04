@@ -1,4 +1,4 @@
-package core;
+package rdd;
 
 import com.google.common.base.Optional;
 import org.apache.spark.SparkConf;

@@ -1,0 +1,31 @@
+Spark Worker原理解析
+Worker启动Driver源码解析
+Worker启动Executor源码解析
+Worker与Master的交互解密
+
+Master-->(LaunchDriver)-->Worker{[DriverRunner]内部使用Thread来处理Driver的启动-->创建Driver在本地文件系统的工作目录-->封装好Driver的启动的Command,并通过ProcessBuilder来启动Driver}-->Driver进程
+
+Master-->(LaunchExecutor)-->Worker{[ExecutorRunner]内部通过Thread来处理Executor的启动-->创建Executor在本地文件系统的工作目录-->封装启动Executor的Command并使用ProcessBuilder来启动Executor}-->Executor进程:ExecutorBackend(CoarseGrainedExecutorBackend)
+
+
+Executor进程-->(Executor向Driver注册给SchedulerBackend)-->Driver
+源码概括:
+override def receive: PartialFunction[Any, Unit] = synchronized {
+    case LaunchDriver(driverId, driverDesc) => {
+     val driver = new DriverRunner(...
+     driver.start()==>
+     	def start() = {
+   			 new Thread("DriverRunner for " + driverId) {
+     			 override def run() {
+     			 	val driverDir = createWorkingDirectory()
+     			 	..
+     			 	worker.send(DriverStateChanged(driverId, state, finalException))
+     			 	}.start()
+     			 	
+    case LaunchExecutor(masterUrl, appId, execId, appDesc, cores_, memory_)=>
+     val manager = new ExecutorRunner(...同上
+	
+二;Worker启动Driver内幕
+	1.Cluster中Driver失败的时候,如果supervise为true,则启动该Driver的Worker会负责重新启动该Driver
+	2.DriveRunner启动进程是通过ProcessBuilder中的process.get.waitFor()来完成
+	3.

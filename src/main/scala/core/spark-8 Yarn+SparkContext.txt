@@ -1,0 +1,123 @@
+Hadoop Yarn的工作流程解密
+Spark on Yarn两种运行模式实战
+Spark on Yarn工作流程解密
+Spark on Yarn工作内部解密
+Spark on Yarn最佳实践
+
+一:Hadoop Yarn解析
+	1.Yarn是Hadoop推出的整个分布式(大数据)集群的资源管理器,负责资源管理和分配,基于Yarn我们可以在同一个大数据集群上同时运行多个计算框架,例如Spark,Mapreduce,Storm等.
+	Yarn具体工作流程:参考spark-2日记详细介绍,或如下:
+	客户端Client向RM提交Application,
+	RM接受应用,并根据集群资源状况决定在具体的某个Ndoe上来启动当前提交的应用程序的Driver(ApplicationMaster),决定后RM会命令具体的某个Node上的资源管理器NodeManager来启动一个新的JVM进程运行程序的Driver部分,
+	当Application启动的时候,会下载当前Application相关Jar等各种资源,并基于此决定具体向ResourceManager申请资源的具体内容,
+	RM接受到ApplicaitonMaster的资源分配的请求后,会最大化的满足资源分配的请求,并把资源的元数据信息发送给AppMaaster,
+	AppMaster收到资源的元数据信息会根据元数据信息发指令给具体的机器上的NodeManager,让NM来启动具体的Container,Container在启动后必须向AppMaster注册,
+	当AppMaster获得用于计算的Containers后,开始进行任务的调度和计算,直到完成.
+	需要补充说明的是,如果RM第一次没有能够完全完成AppMaster分配资源的请求,后续RM在发现集群中有新的可用资源时候,会主动向AppMaster发送新的可用资源的元数据信息以提供更多的资源用于当前程序的运行!!
+	1.如果Hadoop的MapReduce计算的话Container不可以复用,如果Spark on Yarn的话Container(Spark的机制,container通过一个线程池来复用);
+	2.Container具体的销毁是有AppMaster来决定的.AppMaster发指令给NodeManager让NM销毁Conatiner
+
+二:Spark on Yarn 的两种运行模式实战:此时不需要启动Spark集群,只需要启动Yarn即可,Yarn的ResourceManager就相当于Spark Standalone模式下的Master!
+	1.Spark on Yarn的两种运行模式:唯一的决定因素是当前Application从任务调度器Driver运行在什么地方!
+	a:Cluster模式:Driver运行在Hadoop Yarn集群下的某台机器上JVM进程中!!!
+	b:Client:Driver运行在当前提交程序的可与寄去上,
+	需要说明的是无论是什么模式,只要当前机器运行了Spark代码,就必须安装Spark!
+	2.Spark on Yarn的运行实战演示:
+	a:Client模式,方便在命令直接看到运行的过程信息,尤其方便做测试使用
+bin/spark-submit \
+--master yarn \
+--deploy-mode client \
+--class org.apache.spark.examples.SparkPi \
+lib/spark-examples-1.6.1-hadoop2.6.0.jar \
+100
+
+	天机解密:Standalone模式下启动Spark集群(也就是启动Master和Worker)其实启动的是资源管理器,真正作业计算的时候和集群资源管理器没有任何关系,所以spark的Job真正执行作业的时候不是运行在启动的Spark集群中的,而是运行在一个JVM中的,只要JVM所在的机器上安装配置了Spark即可!!!
+
+=================================================
+Spark天堂之门
+SparkContext使用案例鉴赏
+SparkContext内幕
+SParkContext源码解密
+一,Spark天堂之门
+	1.Spark程序在运行的时候分为Driver和Executors两部分,
+	2.Spark的程序编写是基于SparkContext的,具体来说包含两方面:
+	a)Spark变成的核心基础---RDD,是有SparkContext来最初创建(第一个RDD一定是有SparkContext来创建)
+	b)Spark程序的调度优化也是基于SparkContext
+	3.Spark程序的注册时通过Sparkcontext实例化时候,产生的对象完成的其实是SchedulerBackend来注册程序)
+	Spark程序运行的时候要通过Cluster Manager获得具体的计算资源,计算资源的获取也是通过SparkContext产生的对象来生成的(其实是SchedulerBackend来获取计算资源的)
+	5.SparkContext崩溃或者结束的时候整个Spark程序结束
+
+总结:
+	SparkContext开启天堂之门:Spark程序是通过SparkContext发布到Spark集群的
+	SparkContext导演天堂世界:Spark程序的运行都是在SparkContext为核心的调度器的指挥下进行的
+	SparkContext关闭天堂之门:SparkContext崩溃或者结束的时候整个SparkContext程序结束!
+	
+二:SparkContext使用案例鉴赏
+三:SparkContext天堂内幕:
+	1.SparkContext构建的顶级三大核心对象:DAGScheduler,TaskScheduler,ShedulerBackend,其中:
+	a)DAGScheduler是面向Job的Stage的高度调度器
+	b)TaskScheduler是一个接口,更具体的Cluster Manager的不同会有不同的实现,Standlone模式下具体的实现是TaskSchedulerImpl
+	c)SchedulerBackend是一个接口,根据具体的Cluster Manager的不同会有不同的实现,Standalone模式下具体实现是SparkDeploySchedulerBackend;
+	2.从真个程序运行的角度来讲,SparkContext包含四大核心对象: DAGScheduler, TaskScheduler, SchedulerBackend, MapOutputTrackerMaster(负责shuffle中数据输出和读取的管理)
+	 // Create and start the scheduler
+    val (sched, ts) = SparkContext.createTaskScheduler(this, master)
+    _schedulerBackend = sched
+    _taskScheduler = ts
+    _dagScheduler = new DAGScheduler(this)
+    _heartbeatReceiver.ask[Boolean](TaskSchedulerIsSet)
+    // start TaskScheduler after taskScheduler sets DAGScheduler reference in DAGScheduler's
+    // constructor
+    _taskScheduler.start()
+    
+###在SparkContext.createTaskScheduler(this, master)具体源码:
+      case LOCAL_CLUSTER_REGEX(numSlaves, coresPerSlave, memoryPerSlave) =>
+        // Check to make sure memory requested <= memoryPerSlave. Otherwise Spark will just hang.
+        val memoryPerSlaveInt = memoryPerSlave.toInt
+        if (sc.executorMemory > memoryPerSlaveInt) {
+          throw new SparkException(
+            "Asked to launch cluster with %d MB RAM / worker but requested %d MB/worker".format(
+              memoryPerSlaveInt, sc.executorMemory))
+        }
+
+        val scheduler = new TaskSchedulerImpl(sc)
+        val localCluster = new LocalSparkCluster(
+          numSlaves.toInt, coresPerSlave.toInt, memoryPerSlaveInt, sc.conf)
+        val masterUrls = localCluster.start()
+        val backend = new SparkDeploySchedulerBackend(scheduler, sc, masterUrls)
+        //在scheduler.initialize(backend)调用的时候会创建SchedulerPool
+        scheduler.initialize(backend)
+        backend.shutdownCallback = (backend: SparkDeploySchedulerBackend) => {
+          localCluster.stop()
+        }
+流程总结:      
+	-->createTaskScheduler():实例化TaskScheduler,创建三大核心实例:
+		-->TaskSchedulerImpl
+		-->SparkDeploySchedulerBackend
+		-->SchedulerPool:FIFO,FAIR等-->
+	-->TaskSchedulerImpl.start()
+		-->SparkDeploySchedulerBackend.start-->AppClient
+			-->ClientEndpoint
+			-->RegisterWithMaster
+			-->tryRegisterAllMasters注册是通过Thread完成的-->注册给Master,Master通过给Work发送指令启动Executor--> Executor1,Executor2,Executor3...-->此时的Executor都向SparkDeploySchedulerBackend注册
+		
+		其中代码:
+		 val command = Command("org.apache.spark.executor.CoarseGrainedExecutorBackend",args, sc.executorEnvs, classPathEntries ++ testingClassPath, libraryPathEntries, javaOpts)
+		 AppClient类中:
+		  def start() {
+			// Just launch an rpcEndpoint; it will call back into the listener.
+			endpoint.set(rpcEnv.setupEndpoint("AppClient", new ClientEndpoint(rpcEnv)))
+		  }
+		 client = new AppClient(sc.env.rpcEnv, masters, appDesc, this, conf)
+		 client.start()
+		 	  registerWithMaster(1)
+		 	
+SparkDeploySchedulerBackend有三大核心功能:
+	负责与Master链接注册当前程序
+	接受集群中为当前应用程序而分配的计算资源Executor的注册并管理Executors;
+	负责发送Task到具体的Executors执行
+	补充说明的是:SparkDeploySchedulerBackend是被TaskSchedulerImpl来管理的
+	
+当通过SparkDeploySchedulerBackend注册程序给Master的时候,会把上述command提交给Master,Master发指令给Worker去启动Executor所在的进程的时候,加载的main方法所在的入口类就是command中的CoarseGrainedExecutorBackend,当然你可以实现自己的ExecutorBackend,在CoarseGrainedExecutorBackend中启动Executor(Executor是先注册再实例化),Excutor通过多线程池并发
+	DAGScheduler:面向Stage的高层调度器
+	SparkUI:背后是Jetty服务器,支持通过WEB方式访问程序的状态
+	

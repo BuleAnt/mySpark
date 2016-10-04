@@ -1,0 +1,40 @@
+数据流角度分析spark的wordcount过程:
+
+Hello spark
+Hello hadoop
+Hello world
+spark is cool !
+HDFS中存储(分布式)数据helloSpark.txt
+-->sc.textFile()-->HadoopRDD:从分布式数据,并且以数据分片方式存储在于集群之中
+	-->host1:Hello spark
+	-->host2:Hello hadoop
+	-->host3:Hello world
+	-->host4:spark is cool !
+-->map()-->MapPatitionRDD:基于HadopRDD产生的Partition去掉KEY
+	-->Hello spark Hello scala
+	-->Hello hadoop
+	-->Hello world
+	-->spark is cool !
+-->lines.flatMap { line => line.split(" ") } -->MapPatitionRDD:对每一个Partiiton中的每一行进行单词切分并合并成一个大的单词实例的集合
+	-->Hello spark Hello scala
+	-->Hello hadoop
+	-->Hello world
+	-->spark is cool !
+-->words.map { word => (word, 1) }-->MapPartitionRDD:对每个单词实例变为 word => (word, 1),Shuffle之前的Local Reduce操作,主要负责本地局部统计,并且把统计后的结果按照分区策略放到不同的File中
+	-->(Hello,1),(spark,1),(Hello,1),(scala,1)-->File1(Hello,2),(spark,1),(scala,1)
+	-->(Hello,1),(hadoop,1)-->File2
+	-->(Hello,1),(world,1)-->File3
+	-->(spark,1),(is,1),(cool,1),(!,1)-->File4
+-->val wordCounts = pairs.reduceByKey(_ + _)-->ShuffledRDD:全局的reduce,发生shuffle,产生两个stage,shuffle之后,在每个分区中演示 如下:
+	-->(Hello,2),(Hello,1),(Hello,1)-->(Hello,4)
+	-->(hadoop,1),(world,1)-->
+	-->(spark,1),(spark,1),(is,1)-->(spark,2),(is,1)
+	-->(cool,1),(!,1),(scala,1)
+-->保存数据到HDFS角度上,MapPartitions,整理格式-->MapPartitionRDD
+第一次计算的时候,我们把key给丢弃了,所以最后向hdfs中写结果的时候,需要生成Key,符合对称法则和能量守恒形式之美....具体代码:
+iter.map { x =>
+        text.set(x.toString)
+        (NullWritable.get(), text)
+      }
+HadoopRDD->MapPartitionsRDD->MapPartitionsRDD->MapPartitionsRDD->MapPartitionsRDD-->第二个Stage:ShuffleRDD->MapPartitionRDD
+

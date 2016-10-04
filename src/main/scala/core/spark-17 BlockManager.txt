@@ -1,0 +1,77 @@
+BlockManager运行实例
+BlockManager原理流程图
+BlockManager源码解析
+
+一:BlockManager运行实例
+从Application启动的角度来观察BlockManager
+	1.在Application启动的时,会在SparkEnv中注册BlockManagerMaster以及MapOutputTracker,其中
+	a)BlockManager:对整个集群的Block数据进行管理的
+	b)MapOutputTrackerMaster:跟踪所有的Mapper的输出的;
+	2.BlockManagerMasterEndpoint本身是一个消息体,会负责通过远程消息通信的方式去管理多有节点的BlockManager
+	3.每启动一个ExecutorBackend(即Executor对象的进程)都会实例化BlockManager,并通过远程通信的方式注册给BolckManagerMaster;实质上是Executor中的BlockManager在启动的时候注册给Driver上的BlockManagerMasterEndpoint
+	4.MemoryStore是BlockManager中专门负责内存数据存储和读写的类;
+	5.DiskStore是BlockManager中专门负责基于磁盘的数据存储和读写的类;
+	6.DiskBlockManager管理Logical Block与Disk上Physical Block之间的映射关系并负责磁盘文件的创建,读写等
+
+从Job运行的角度来观察BlockManager:
+	1.首先通过MemoryStore来存储广播变量
+	2.在Driver中通过BlockManagerInfo来管理集群中每个ExecutorBackend中的BlockManager中的元数据信息;
+	3.当改变了具体的ExecutorBackend上的信息后就必须发消息给Driver中的BlockManagerMaster来更新相应的BlockManagerInfo的信息;
+	4.当执行第二个Stage的时候,第二个Stage会向Driver中的MapOutputTrackerMansterEndpoint发消息请求上一个Stage中相应的输出,此时MapOutputTrackerMaster会把上一个Stage的输出数据的元数据信息发送给当前请求的Stage
+结构如下:
+BlockManagerMaster:BlockManagerMasterEndpoint[
+	BlockManagerInfo(BlockStatus)
+	]
+	
+ExecutorBackend:Executor[
+	BlockManager(MemoryStore,DiskStore);
+	(BlockManagerWorker,BlockTransferService)
+	]
+Executor[BlockManager]-->BlockManagerMasterEndpoint
+每个Executor中的BlockManager实例化的时候会向Driver中的BlockManagerManster注册,此时BlockManagerMaster会为其创建BlockManagerInfo来进行元数据管理;
+
+Executor1(BlockTransferService)<--(网络操作)-->Executor2(BlockTransferService)
+Executor1(BlockTransferService)--(执行Replication操作)-->Executor2
+
+
+
+BlockManager源码详解
+BlockeMamagerMaster源码详解
+BlockManager具体读写数据源码解析
+
+一:BlockManager源码:
+	BlockTransferServivce:网络操作,联通另外一个Executor进行读写操作
+	Block是spark应用程序运行角度数据最小抽象单位,Block可以存储在memory,disk,off-heap等存储中
+	DiskBlockManager:管理磁盘读写
+	
+	1. 当Executor实例化的时候会通过BlockManager.initialize来实例化Executor上的BlockManager并且创建BlockManagerSlaveEndpoint这个消息循环体来接收Driver中的BlockManagerMaster发过来的指令,例如删除Block等;
+if (!isLocal) {
+    env.metricsSystem.registerSource(executorSource)
+    env.blockManager.initialize(conf.getAppId)
+  }
+   master.registerBlockManager(blockManagerId, maxMemory, slaveEndpoint)
+   -->private val slaveEndpoint = rpcEnv.setupEndpoint(
+		"BlockManagerEndpoint" + BlockManager.ID_GENERATOR.next,
+		new BlockManagerSlaveEndpoint(rpcEnv, this, mapOutputTracker))
+		-->private[storage]
+			class BlockManagerSlaveEndpoint(...){
+				receiveAndReply(){
+				case RemoveRdd(rddId)
+				case RemoveShuffle(shuffleId)
+				case RemoveBroadcast(broadcastId, _)
+				...
+				}
+	2.当BlockManagerSlaveEndpoint实例化后,Executor上的BlockManager需要向Driver上的BlockManagerMasterEndpoint注册:
+BlockManager.initialize(){
+	 master.registerBlockManager(blockManagerId, maxMemory, slaveEndpoint)
+	 -->BlockManagerMaster.registerBlockManager(){
+	 	tell(RegisterBlockManager(blockManagerId, maxMemSize, slaveEndpoint))
+	 	-->BlockManagerMaster.tell(){
+	 		 if (!driverEndpoint.askWithRetry[Boolean](message)) {
+	3.BlockManagerMasterEndpoint接收到注册信息进行处理
+	 		 -->BlockManagerMasterEndpoint.receiveAndReply(){
+		 		 case RegisterBlockManager(blockManagerId, maxMemSize, slaveEndpoint) =>
+				  register(blockManagerId, maxMemSize, slaveEndpoint)
+				  context.reply(true)
+	
+	

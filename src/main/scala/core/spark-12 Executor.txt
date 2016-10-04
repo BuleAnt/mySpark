@@ -1,0 +1,72 @@
+Spark Executor工作原理图
+ExecutorBackend注册源码解密
+Executor实例化内幕
+Executor具体是如何工作的
+
+Master发指令给Worker启动Executor-->Worker接受到Master发送过来的指令通过ExecutorRunner启动领完一个进程来运行Executor-->CoarseGrainedExecutorBackend-->(通过发送RegisterExecutor向Driver注册)-->Driver(在DriverEndpoint中会接收到RegisterExecutor信息,并完成注册,其实质是注册给CoarseGrainedSchedulerBackend)-->(Driver在Executor注册成功过后会返回RegisterExecutor信息给CoarseGrainedExecutorBackend)-->CoarseGrainedExecutorBackend[Executor]:Executor是真正负责Task计算的,其实例化的时候会实例化一个线程池来准备Task的计算-->ThreadPool:创建的ThreadPool中以多线程并发执行和线程复用的方式来高效的执行Spark发过来的Task
+
+Driver-->(Driver向ExecutorBackend发送LaunchTask)-->Executor-->(launchTask来执行任务)-->ThreadPool:接收到Task执行的命令后,会首先把Task封装在TaskRunner里面,然后交给线程池中的线程处理-->TaskRunner:TaskRunner其实是java中的Runnable节后的具体实现,在真正工作的时候会交给线程池中的线程去运行,此时会调用Run方法来执行Task-->TaskRunner在调用run方法的时候会调用Task的run方法,而Task的run方法会调用runTask,而实际Task有ShuffleMapTask和ResultTask;
+
+
+一:Spark Executor工作原理
+	1.需要特别注意的是在CoarseGrainedExecutorBackend启动时向Driver注册Executor,其实质是注册ExecutorBackend实例,和Executor实例之间没有直接关系!!
+	2.CoarseGrainedExecutorBackend是Executor运行所在的进程名称,Executor才是真正处理Task的对象,Executor内部是通过线程的方式完成Task的计算;
+	3.CoarseGrainedExecutorBackend是Executor是一一对应的;
+	4.GoarseGrainedExecutorBackend是一个消息通信体(其具体实现了ThreadSafeRPCEndpoint),可以发送信息给Driver并可以接受Driver中发过来的指令,例如启动Task等;
+	5.在Driver进程中有两个重要的Endpoint
+	a)ClientEndpoint:主要负责向Master注册当前的程序,是AppClient的内部成员;
+	b)DriverEndpoint:这个是整个程序运行时候的驱动器,是CoarseGrainedExecutorBackend的内部成员;
+	参考:spark-8内容
+
+源码:
+override def receiveAndReply(context: RpcCallContext): PartialFunction[Any, Unit] = {
+      case RegisterExecutor(executorId, executorRef, hostPort, cores, logUrls) =>
+	 if (executorDataMap.contains(executorId)) {
+          context.reply(RegisterExecutorFailed("Duplicate executor ID: " + executorId))
+        } 
+	6.在Driver中通过Executor封装并注册ExectorBackend的信息到Driver的内存数据结构executorMapData中:
+源码:
+private val executorDataMap = new HashMap[String, ExecutorData]
+其中:
+private[cluster] class ExecutorData(
+   val executorEndpoint: RpcEndpointRef,
+   val executorAddress: RpcAddress,
+   override val executorHost: String,
+   var freeCores: Int,
+   override val totalCores: Int,
+   override val logUrlMap: Map[String, String]
+) extends ExecutorInfo(executorHost, totalCores, logUrlMap)
+	
+	7.实际在执行的时候,DriverEndpoint会把信息写入CoarseGrainedSchedulerBackend的内存数据结构executorMapData中,所以最终是注册给了CoarseGrainedExecutorBackend,也就是CoarseGrainedExecutorBackend掌握了为当前程序分配的所有的ExecutorBackend进程,而在每一个ExecutorBackend进程实例中会通过Executor对象来负责具体Task的运行.在运行的时候使用synchronized关键字来保证executorMapData的线程写安全操作
+	 CoarseGrainedSchedulerBackend.this.synchronized {
+            executorDataMap.put(executorId, data)
+            if (numPendingExecutors > 0) {
+              numPendingExecutors -= 1
+              logDebug(s"Decremented number of pending executors ($numPendingExecutors left)")
+            }
+          }
+	8.CoarseGrainedExecutorBackend收到DriverEndpoint发送过来的RegisterExecutor消息后会启动Executor实例对象,而Executor实例对象事实上负责整整的Task计算.
+	context.reply(RegisteredExecutor(executorAddress.host))
+	通过rpc通新,将进入CoreGrainedExecutorBackend类中的receive方法:
+override def receive: PartialFunction[Any, Unit] = {
+    case RegisteredExecutor(hostname) =>
+      logInfo("Successfully registered with driver")
+      executor = new Executor(executorId, hostname, env, userClassPath, isLocal = false)
+Executor源码:
+	private[spark] class Executor(...){
+	  private val threadPool = ThreadUtils.newDaemonCachedThreadPool("Executor task launch worker")
+
+二:Executor具体是如何进行工作的:
+	1.当Driver发送过来Task的时候,其实是发送给了CoarseGrainedExecutorBackend这个RpcEndpoint,而不是直接发送给了Executor(Executor由于不是消息循环体,所以永远也无法接受远程发送过来的信息)
+	2.ExecutorBackend在收到Driver中发送过来的消息后会提供调用launchTask来交给Executor去执行;
+	case LaunchTask(data) =>
+	if (executor == null) {
+        logError("Received LaunchTask command but executor was null")
+        System.exit(1)
+      } else {
+        val taskDesc = ser.deserialize[TaskDescription](data.value)
+        logInfo("Got assigned task " + taskDesc.taskId)
+        executor.launchTask(this, taskId = taskDesc.taskId, attemptNumber = taskDesc.attemptNumber,
+          taskDesc.name, taskDesc.serializedTask)
+      }
+

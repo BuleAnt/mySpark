@@ -1,0 +1,171 @@
+通过案例观察Spark架构
+手动Spark内部架构
+Spark Job的逻辑视图解析
+Spark Job的物理视图解析
+hadoop@hadoop:spark-compiled$ jps
+4901 Main
+6380 DataNode
+7569 Jps
+7271 Master
+6599 SecondaryNameNode
+6203 NameNode
+6779 ResourceManager
+6925 NodeManager
+7387 Worker
+7505 HistoryServer
+bin/spark-shell --master spark://hadoop:7010
+Spark Master at spark://hadoop:7010 
+
+Worker Id	Address	State	Cores	Memory
+worker-20160714133902-192.168.0.3-46519 	192.168.0.3:46519 	ALIVE 	4 (4 Used) 	4.0 GB (4.0 GB Used) 
+ Running Applications
+Application ID	Name	Cores	Memory per Node	Submitted Time	User	State	Duration
+app-20160714134046-0000
+(kill)
+	Spark shell 	4 	4.0 GB 	2016/07/14 13:40:46 	hadoop 	RUNNING 	24 s
+在web UI上出现对应个数的Executors,这里是伪分布式,则Executors个数为2,即Worker一个,Master一个,实际上一个Worker上可以有多个Executor,根据集群资源和性能调优而定
+默认的资源分配方式:在每个Worker上为当前程序分配一个ExecutorBackend进程,且默认情况下会最大化的使用Cores和Memory
+例如,启动spark-shell后的jps如下:
+hadoop@hadoop:spark-compiled$ jps
+4901 Main
+7743 CoarseGrainedExecutorBackend
+6380 DataNode
+7271 Master
+6599 SecondaryNameNode
+6203 NameNode
+6779 ResourceManager
+6925 NodeManager
+7629 SparkSubmit
+7387 Worker
+7505 HistoryServer
+其中CoarseGrainedExecutorBackend进程是spark-submit的进程
+
+启动一个作业:
+sc.textFile("file:///home/hadoop/test/data/data").flatMap(_.split(" ")).map(word=>(word,1)).reduceByKey(_+_,1).map(pair => (pair._2,pair._1)).sortByKey(false).map(pair => (pair._2,pair._1)).collect()
+Jps查看:
+hadoop@hadoop:spark-compiled$ jps
+4901 Main
+8194 Jps
+7743 CoarseGrainedExecutorBackend
+6380 DataNode
+7271 Master
+6599 SecondaryNameNode
+6203 NameNode
+6779 ResourceManager
+6925 NodeManager
+7629 SparkSubmit
+7387 Worker
+7505 HistoryServer
+在Web UI上查看:
+
+在一个Executor中一次性最多能够运行多少个并发的Task取决于当前Executor能够使用的Cores的数量
+应对OOM处理:原因:任务比较多或者任务处理的数据比较大
+如果spark是单独的集群,增加分片数量可以减小OOM,分片数量多则每个分片处理的数据就小
+88个任务具体分配给谁主要取决于数据本地性,具体每个任务运行在线程中,另一方面:通过线程池进行线程复用
+
+spark内部架构:(进程图)
+SparkApplication:SparkSubmit(Driver所在的进程)->Driver->main方法->SparkContext
+Master:在每个Worker中分配
+Worker Node1;Worker Node2;Worker Node3...:Worker进程:ExecutorRunner->CoarseGrainedExecutorBackend->Executor->Thread Pool(无状态,代表计算资源,不关心具体运行的代码)->Thread(Runnable接口)->Task
+关键点利用Thread知识:由于线程不关心具体Task运行什么代码,所有Task和Thread是解耦和的,所有Thread是可以复用的
+具体流程:
+当Spark集群启动的时候,首先启动Master进程,负责整个集群资源的管理和分配,并接受作业的提交,且为作业分配计算资源,每个工作节点默认情况下都会启动一个Worker Process来管理当前的Memory,CPU等计算资源,(注意:Work Process不会管理计算资源,归Master管理,在这里只是受Master支配进行管理),并且向Master汇报Worker还能够正常工作;
+当用户提交作业给Master时候,Master会为程序分配ID,并分配计算资源,默认情况下会为当前应用程序在每个Worker Process下分配一个CoarseGrainedExecutorBackend 进程,该进程默认情况下会最大化的使用当前节点上的内存和CPU
+注:
+我们说的Worker Process管理当前节点的内存和CPU等计算资源,实质上通过Master来管理每台机器上的计算资源的
+Worker Process会接受Master的指令,为当前要运行的应用程序分配CoarseGrainedExecutorBackend进程
+逻辑视图解析:
+物理执行:
+Stage0是Stage1的Mapper,Stage1是Stage2的Mapper,Stage1是Stage0的Reducer.SPark是一个更加精致和高效的MapReduce思想的具体实现
+最后一个Stage里面的Task是Result类型的,前面的所有Stage中的Task都是ShuffleMapTes类型
+Stage里面的内容一定是Executor中执行的,而且Stage必须从前往后执行
+Spark的一个应用程序中可以以内不同的Action产生中众多的Job,每个Job至少有一个Job
+重点:巩固前面的内容,开启下面spark密码之旅
+
+================================================
+RDD依赖管理的本质内幕
+依赖关系下的数据流视图
+经典的RDD依赖关系解析
+RDD依赖关系源码内幕
+
+窄依赖和款依赖:
+1.窄依赖指每个父RDD的一个Partition最多被多个RDD的一个Partition所使用,例如map,filter,union等都会产生窄依赖;
+2.宽依赖是值一个父RDD的Partition会被多个RDD的Partition所使用,groupByKey,reduceBYKey,sorByKey等操作都会产生宽依赖
+总结:如果父RDD的一个Parititon被一个RDD的Parititon所使用就是窄依赖,否则的化就是宽依赖.如果子rdd中的Partiton对父RDD的partition依赖的数量不会随着RDD数据规模的改变而改变的化,就是窄依赖,否则的化就是宽依赖
+
+特别说明:对join操作有两种情况,如果join操作的使用每个partition仅仅和已知的Partition进行join,这次是join操作就是窄依赖,其他的情况join操作就是宽依赖
+因为是确定的partition数量的依赖关系,所以就是窄依赖,得出一个推论,窄依赖不仅包含一对一的窄依赖,还包含一对固定个数的窄依赖(也就是说对父RDD的依赖的Partition的数量不会随着RDD数据规模的改变而改变)
+
+讲所有的Stage合并在一个Stage中计算:
+Task太大:遇到Shuffle级别你的依赖关系必须一算依赖的RDD的所有Partitions,并且都发生在一个Task中计算
+回溯,血统.pipeline
+核心的问题:上面两种假设的核心问题都是在遇到shuffle依赖的时候无法进行pipeline
+
+总结(注意点):
+从后往前推理,遇到宽依赖就断开,遇到窄依赖就把当前的RDD加入到该Stage中
+每个stage里面的Task数量是由该Stage中最后一个RDD的Partition的数量决定的
+最后一个Stage里面的任务类型是ResultTask,前面其他所有的Stage任务类型是ShuffleTask;
+代表当前Stage的算子一定是该Stage的最后一个计算算子
+
+hadoop中的Mapreduce操作的Mapper和Reducer在Spark中的基本等量算子是:map和reduceByKey
+表面上看是数据在流动,实际上指算子在流动
+(包含两个意思:1,数据不动,代码动
+2,在一个stage内部算子为何会流动,pipline:首先是算子合并,也就是所谓的函数式编程执行的时候最终进行函数的展开从而把一个stage内部的多个算子合并成为一个大算子(其中包含了当前stage中所有算子对数据的计算逻辑;
+其次是由于Tranformation操作的Lazy特性!!!在具体算子交给集群的Executor计算之前首先会通过Spark Framework(DAGScheduler)进行算子的优化(基于数据本地性的Pipeline));
+
+spark源码:
+class CoGroupedRDD[K: ClassTag](
+    @transient var rdds: Seq[RDD[_ <: Product2[K, _]]],
+    part: Partitioner)
+  extends RDD[(K, Array[Iterable[_]])](rdds.head.context, Nil) {
+  
+  reduceByKey:调用:
+ def combineByKeyWithClassTag[C](
+      createCombiner: V => C,
+      mergeValue: (C, V) => C,
+      mergeCombiners: (C, C) => C,
+      partitioner: Partitioner,
+      mapSideCombine: Boolean = true,
+      serializer: Serializer = null)(implicit ct: ClassTag[C]): RDD[(K, C)] = self.withScope {
+      
+==================================================
+再次思考pipeline
+窄依赖物理执行内幕
+款依赖物理执行内幕
+Job提交流程
+
+一:再次思考pipeline
+即使采用pileline的方式,函数f对依赖的RDD中的数据的操作也会有两种方式:
+1.f(record),f作用于集合的每一条记录,每次只作用于一条记录;
+2.f(records),f一次性作用于集合的全部数据;
+Spark采用的是第一种方式,原因:
+	1.无需等待,可以最大化的使用集群的计算资源
+	2.减少OOM的发生
+	3.最大化的有利于并发
+	4.可以精准的控制每一个partition(Dependency)本身内部的计算(compute);
+	5.基于lineage的算子流动式函数式编程节省了中间结果的产生,并且可以最快的恢复
+
+二:思考Spark Job具体的物理执行:
+	Spark Application里面可以产生1个或多个Job,例如spark-shell默认启动的时候,内部就没有Job,只是作为资源的分配程序,可以在里面写代码产生若干个Job,普通程序中一般而言可以有不同的Action,每个Action一般也会触发一个Job
+	Spark是MapReduce思想的一种更加精致和高效的实现,MapReduce有很多具体不同的实现,例如Hadoop的MapRedcue基本的计算流程如下:首先以JVM为对象的并发执行的Mapper,Mapper中map的执行会产生输出数据,输出数据会经过Partitioner指定的规则放到Local FileSystem中,然后在精油SHuffle,Sort,Aggregate变成Reducer中的redcue的输入,执行reduce产生最终的执行结果,Hadoop MapReduce执行的流程虽然简单,但是过于死板,尤其是在构造复杂算法(迭代)时候非常不利于算法的实现,且执行效率极为底下
+	Spark算法构造和物理执行时最最基本的核心:最大化Pipeline!
+	基于Pipeline的思想,数据被使用的时候才开始计算,从数据流动的视角来说,是数据流动到计算的位置!!!实质上从逻辑的角度来看,是算子在数据上流动!
+	从算法构建的角度而言:肯定是算子作用于数据,所以是算子在数据上流动;方便算法的构建
+	从物理执行的角度而言:是数据流动到计算的位置;方便系统最为高效的执行!
+	
+对pipeline而言,数据计算的位置就是每个Stage中最后的RDD,一个震撼人心的内幕真相就是:每个Stage中除了最后一个RDD算子是真实以外,前面的算子都是假的!!
+
+由于计算Lazy特性,导致计算从后往前回溯,形成Computing Chain,导致的结果就是需要首先计算出具体Stage内部最左侧的RDD中本次计算依赖的Partition
+
+三:窄依赖物理执行内幕
+	一个Stage内部的RDD都是窄依赖,窄依赖计算本身是逻辑上看从最左侧的RDD开始立即计算的,根据Computing Chain,数据(Record)从一个计算步骤流动到下一个计算步骤,以此类推,直到计算到Stage内部的最后一个RDD来产生计算结果
+	Computing Chain的构建是从后往前回溯构建而成,而实际的物理计算则是让数据从前往后在计算上流动,知道流动到不能再流动位置才开始计算下一个Record.这就导致了一个美好的结果:后面的RDD对前面的RDD的依赖虽然是Partition级别的数据集合的依赖,但是并不需要父RDD把Partition中所有Records计算完毕才整体往后流动数据进行计算,这就极大的提高了计算速率!
+	
+源代码:
+MapPartitionsRDD:
+  override def compute(split: Partition, context: TaskContext): Iterator[U] =
+    f(context, split.index, firstParent[T].iterator(split, context))
+
+
+宽依赖物理执行内幕:
+	必须等到依赖的父Stage中的最后一个RDD把全部数据彻底计算完毕,才能够经过Shuffle来计算当前的Stage
