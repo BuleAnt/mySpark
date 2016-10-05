@@ -17,48 +17,48 @@ import scala.Tuple2;
  */
 public class JSecondarySort {
 
-    public static void main(String[] args) {
-        SparkConf conf = new SparkConf().setAppName("SecondarySort").setMaster(
-                "local");
-        @SuppressWarnings("resource")
-        JavaSparkContext sc = new JavaSparkContext(conf);
-        JavaRDD<String> lines = sc.textFile("file:///home/hadoop/test/data/txt/a");
-        JavaPairRDD<JSecondarySortKey, String> pairs = lines
-                .mapToPair(new PairFunction<String, JSecondarySortKey, String>() {
-                    private static final long serialVersionUID = 1L;
+	public static void main(String[] args) {
+		SparkConf conf = new SparkConf().setAppName("SecondarySort").setMaster(
+				"local");
+		@SuppressWarnings("resource")
+		JavaSparkContext sc = new JavaSparkContext(conf);
+		JavaRDD<String> lines = sc.textFile("file:///home/hadoop/test/data/txt/a");
+		JavaPairRDD<JSecondarySortKey, String> pairs = lines
+				.mapToPair(new PairFunction<String, JSecondarySortKey, String>() {
+					private static final long serialVersionUID = 1L;
 
-                    @Override
-                    public Tuple2<JSecondarySortKey, String> call(String line)
-                            throws Exception {
-                        String[] splited = line.split("\t");
-                        JSecondarySortKey key = new JSecondarySortKey(Integer
-                                .valueOf(splited[0]), Integer
-                                .valueOf(splited[1]));
-                        return new Tuple2<JSecondarySortKey, String>(key, line);
-                    }
-                });
-        JavaPairRDD<JSecondarySortKey, String> sorted = pairs.sortByKey();//完成二次排序
+					@Override
+					public Tuple2<JSecondarySortKey, String> call(String line)
+							throws Exception {
+						String[] splited = line.split("\t");
+						JSecondarySortKey key = new JSecondarySortKey(Integer
+								.valueOf(splited[0]), Integer
+								.valueOf(splited[1]));
+						return new Tuple2<JSecondarySortKey, String>(key, line);
+					}
+				});
+		JavaPairRDD<JSecondarySortKey, String> sorted = pairs.sortByKey();//完成二次排序
 
-        // 过滤掉排序后的Key,保留排序的结果Tuple2<JSecondarySortKey, String>(key, line)=>line:String
-        JavaRDD<String> secondarySorted = sorted
-                .map(new Function<Tuple2<JSecondarySortKey, String>, String>() {
-                    private static final long serialVersionUID = 1L;
+		// 过滤掉排序后的Key,保留排序的结果Tuple2<JSecondarySortKey, String>(key, line)=>line:String
+		JavaRDD<String> secondarySorted = sorted
+				.map(new Function<Tuple2<JSecondarySortKey, String>, String>() {
+					private static final long serialVersionUID = 1L;
 
-                    @Override
-                    public String call(
-                            Tuple2<JSecondarySortKey, String> sortedContent)
-                            throws Exception {
-                        return sortedContent._2;
-                    }
-                });
+					@Override
+					public String call(
+							Tuple2<JSecondarySortKey, String> sortedContent)
+							throws Exception {
+						return sortedContent._2;
+					}
+				});
 
-        secondarySorted.foreach(new VoidFunction<String>() {
-            private static final long serialVersionUID = 1L;
+		secondarySorted.foreach(new VoidFunction<String>() {
+			private static final long serialVersionUID = 1L;
 
-            @Override
-            public void call(String sorted) throws Exception {
-                System.out.println(sorted);
-            }
-        });
-    }
+			@Override
+			public void call(String sorted) throws Exception {
+				System.out.println(sorted);
+			}
+		});
+	}
 }

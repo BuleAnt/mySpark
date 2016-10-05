@@ -1,0 +1,40 @@
+常用的RDD Tansformation
+map(func) ,
+filter(func) ,过滤 func:_.contains(".."),_.startwith("..")
+flatMap(func) ,_.split(" ") 序列化map
+mapPartitions(func) ,mapPartitionsWithIndex(func) ,sample(withReplacement, fraction, seed) ,
+union(otherDataset) ,合并
+intersection(otherDataset) ,distinct([numTasks])) ,去除重复
+
+groupByKey([numTasks]) ,分组
+reduceByKey(func, [numTasks]) ,按照key进行reduce合并
+aggregateByKey(zeroValue)(seqOp, combOp, [numTasks]) ,
+sortByKey([ascending], [numTasks]) ,按照key进行sort
+join(otherDataset, [numTasks]) ,加入,
+cogroup(otherDataset, [numTasks]) ,
+cartesian(otherDataset) ,
+pipe(command, [envVars]) ,
+coalesce(numPartitions) ,
+repartition(numPartitions) ,repartitionAndSortWithinPartitions(partitioner)
+
+
+常用的RDD action
+reduce(func) ,例如:reduce((_+_))
+collect() :转换成一个集合
+count() 计数
+first() 第一个元素
+take(n) 返回n行/个元素
+takeSample(withReplacement, num, [seed]) takeOrdered(n, [ordering]) saveAsTextFile(path) 文本文件保存
+saveAsSequenceFile(path)(Java and Scala)
+saveAsObjectFile(path)(Java and Scala)
+countByKey() 对key进行count
+foreach(func) 遍历
+
+
+缓存RDD chache:将RDD缓存到内存当中去
+cache方法是延迟执行的,需要讲RDD进行一个action时才执行
+cache是persistent特殊缓存方式,将RDD放到内存中
+
+http://www.aboutyun.com/thread-11277-1-1.html
+http://blog.jasonding.top/
+http://spark.apache.org/docs/latest/configuration.html#runtime-environment

@@ -1,18 +1,88 @@
-Spark SQL下案例综合实战
-	1，Spark SQL案例分析
+一: Spark SQL下案例综合实战
+	1，Spark SQL案例分析join操作
 	2，通过Java和Scala实现案例
-
-peoples.json
+	一个DF读取json文件,格式如下peoples.json
 {"name":"Michael","score":98}
 {"name":"Andy","score":95}
 {"name":"Justin","score":68}
+	另外一个表的数据不在一个文件里，采用代码编程。
+	讲两个DF进行join,是通过转化为RDD的join,然后在转回DF
+	See: JSQLwithJoin.java/SQLwithJoin.scala
+	实际场景的数据来源可能有多重不同的数据来源，可能来自另外一个计算框架。
 
-另外一个表的数据不在一个文件里，采用代码编程。
-实际场景的数据来源可能有多重不同的数据来源，可能来自另外一个计算框架。
+二: Spark SQL通过JDBC操作Mysql
+	1，Spark SQL操作关系型数据库的意义
+	2，Spark SQL操作关系型数据库实战
 
-Scala版本
-将数据上传到HDFS上。
-hadoop dfs –put ./peoples.json /library/
+	使用Spark通过JDBC操作数据库
+	Spark SQL可以通过JDBC从传统的关系型数据库中读写数据，读取数据后直接生成的是DataFrame。
+	然后再加上借助于Spark内核的丰富的API来进行各种操作。
+	从计算数据规模的角度去讲，集群并行访问数据库数据。
+
+	1.通过format（“jdbc”） 的方式说明sparksql操作的数据通过jdbc获得
+	jdbc 后端一般是数据库例如mysql 。oracle
+	2.通过DataFrameReader的option的方法把方位的数据库的信息传递进去
+		url：代表数据库的jdbc链接地址
+		datable 具体指哪个数据库
+	3. dirver 部分是是sparksql访问数据库的具体的驱动完整的包名和类名
+	4. 关于jdbc 的驱动jar，可以放在spark的lib 目录下，也可以在使用sparksubmit的使用指定的jar
+
+	在实际的企业级开发环境中我们如果数据库中数据规模特别大，
+	例如10亿条数据，此时采用传统的db 去处理的话，一般需要对数据分成很多批次处理例如分成100批
+	（首受限于单台server的处理能力）且实际处理可能会非常复杂，通过传统的J2ee 等基石很难或者很不方便实现处理方法，
+	此时使用sparksql获得数数据库中的数据并进行分布式处理就可以非常好的解决该问题，
+	但是sparksql 加载数据需要时间，所以一边会在sparksql和db 之间加一个缓冲层
+	例如中间使用redis，可以把spark的处理速度提高甚至45倍。
+
+	1.当dataframe要把通过spark sql、core、ml等复杂操作后的数据写入数据库的时候 首先是权限的问题，必须
+	确保数据库授权了当前操作spark sql的用户
+	2.Dataframe要写数据到db 的时候，一般都不可以直接写进去，而是要转成RDD，通过RDD写数据到db中
+	Java版本：See:JJDBC2MySql.java
+create table stu_age (name varchar(20) not null primary key,age tinyint);
+create table stu_score (name varchar(20) not null primary key,score int);
+insert into stu_age values('zhangsan',17);
+insert into stu_age values('lisi',18);
+insert into stu_score values('zhangsan',71);
+insert into stu_score values('lisi',81);
+
+create table  if not exists student(name varchar(20)not null primary key,age tinyint,score int)
+insert into result values('string',1,2);
+
+三: Spark SQL通过Hive数据源实战
+	1，Spark SQL操作Hive解析
+	2，Spark SQL操作Hive实战
+
+	在目前企业级大数据Spark开发时候绝大多手情况下是采用Hive作为数据仓库,
+	Spark提供了Hive的支持功能,Spark通过HiveContext可直接操作Hive中数据
+		1.基于HiveContext我们可以使用sql/hql两种方式编写sql语句对hive进行操作,包括
+		创建表,删除表,向表里导入数据,以及用sql语法构造各种sql语句对表中数据进行操作
+		2.也可以直接通过saveAsTable的方式把DaraFrame中的数据保存到Hive数据仓库中
+		3.可以直接通过HiveContext.table方法来直接加载Hive中的表而生成DataFrame
+
+	打包idea方法:
+	File->Project Structure-->Artifacts-->选择from Module..本项目,
+	然后删除所有依赖jar包,只保留本项目mySpark compile output,选择主类,必须是class,object不能选择
+	指定输出路径,jar名称后保存,Build-->Build Artifacts
+启动环境:hive –service metastore &
+hiveContext.sh
+spark-submit --class spark_sql.SQL2Hive
+--files $HIVE_HOME/conf/hive-site.xml
+--driver-class-path $HIVE_HOME/lib/mysql-connector-java-5.1.35-bin.jar
+--master spark://Master:7077 /root/Documents/SparkApps/WordCount.jar
+--f
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 rdd-->DF
