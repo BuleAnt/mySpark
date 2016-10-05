@@ -1,4 +1,4 @@
-一: Spark SQL下案例综合实战
+一: Spark SQL案例综合
 	1，Spark SQL案例分析join操作
 	2，通过Java和Scala实现案例
 	一个DF读取json文件,格式如下peoples.json
@@ -48,29 +48,123 @@ insert into stu_score values('lisi',81);
 create table  if not exists student(name varchar(20)not null primary key,age tinyint,score int)
 insert into result values('string',1,2);
 
-三: Spark SQL通过Hive数据源实战
+三: Spark SQL通过Hive数据源
 	1，Spark SQL操作Hive解析
 	2，Spark SQL操作Hive实战
 
 	在目前企业级大数据Spark开发时候绝大多手情况下是采用Hive作为数据仓库,
 	Spark提供了Hive的支持功能,Spark通过HiveContext可直接操作Hive中数据
 		1.基于HiveContext我们可以使用sql/hql两种方式编写sql语句对hive进行操作,包括
-		创建表,删除表,向表里导入数据,以及用sql语法构造各种sql语句对表中数据进行操作
-		2.也可以直接通过saveAsTable的方式把DaraFrame中的数据保存到Hive数据仓库中
-		3.可以直接通过HiveContext.table方法来直接加载Hive中的表而生成DataFrame
+			创建表,删除表,向表里导入数据,以及用sql语法构造各种sql语句对表中数据进行操作
+		2.直接通过saveAsTable的方式把DaraFrame中的数据保存到Hive数据仓库中
+		3.直接通过HiveContext.table方法来直接加载Hive中的表而生成DataFrame
 
 	打包idea方法:
 	File->Project Structure-->Artifacts-->选择from Module..本项目,
 	然后删除所有依赖jar包,只保留本项目mySpark compile output,选择主类,必须是class,object不能选择
 	指定输出路径,jar名称后保存,Build-->Build Artifacts
-启动环境:hive –service metastore &
-hiveContext.sh
-spark-submit --class spark_sql.SQL2Hive
---files $HIVE_HOME/conf/hive-site.xml
---driver-class-path $HIVE_HOME/lib/mysql-connector-java-5.1.35-bin.jar
---master spark://Master:7077 /root/Documents/SparkApps/WordCount.jar
---f
+	启动环境:hive –service metastore &
+	脚本See: hiveContext.sh
 
+四: SparkSQL内置函数
+	1 SparkSQL内置函数解析
+	2 SparkSQL内置函数实战
+
+	SparkSQL的DataFrame引入了大量的内置函数，这些内置函数一般都有CG（CodeGeneration）功能，这样的函数在编译和执行时都会经过高度优化。
+	问题：SparkSQL操作Hive和Hive on Spark一样吗？
+		不一样。
+		SparkSQL操作Hive只是把Hive当作数据仓库的来源，而计算引擎就是SparkSQL本身。
+		Hive on spark是Hive的子项目，Hive on Spark的核心是把Hive的执行引擎换成Spark。
+		众所周知，目前Hive的计算引擎是Mapreduce，因为性能低下等问题，所以Hive的官方就想替换这个引擎。
+	SparkSQL操作Hive上的数据叫Spark on Hive，而Hive on Spark依旧是以Hive为核心，只是把计算引擎由MapReduce替换为Spark
+	Spark官网上DataFrame 的API Docs：http://spark.apache.org/docs/1.6.1/api/scala/index.html#org.apache.spark.sql.DataFrame
+
+使用Scala开发集群运行的Spark WordCount程序
+	使用Spark SQL中的内置函数对数据进行分析，Spark SQL API不同的是，
+	DataFrame中的内置函数操作的结果是返回一个Column对象，
+	而DataFrame天生就是"A distributed collection of data organized into named columns.",
+	这就为数据的复杂分析建立了坚实的基础并提供了极大的方便性，
+		例如说，我们在操作DataFrame的方法中可以随时调用内置函数进行业务需要的处理，
+		这之于我们构建附件的业务逻辑而言是可以极大的减少不必须的时间消耗（基于上就是实际模型的映射），
+		让我们聚焦在数据分析上，这对于提高工程师的生产力而言是非常有价值的
+
+	Spark 1.5.x开始提供了大量的内置函数，例如agg：
+	def agg(aggExpr: (String, String), aggExprs: (String, String)*): DataFrame = {
+		groupBy().agg(aggExpr, aggExprs : _*)
+	}
+	还有max、mean、min、sum、avg、explode、size、sort_array、day、to_date、abs、acros、asin、atan
+	总体上而言内置函数包含了五大基本类型：
+		1, 聚合函数，例如countDistinct、sumDistinct等；
+		2, 集合函数，例如sort_array、explode等
+		3, 日期、时间函数，例如hour、quarter、next_day
+		4, 数学函数，例如asin、atan、sqrt、tan、round等；
+		5, 开窗函数，例如rowNumber等
+		6, 字符串函数，concat、format_number、rexexp_extract
+		7, 其它函数，isNaN、sha、randn、callUDF
+
+	第1步：创建Spark的配置对象SparkConf，设置Spark程序的运行时的配置信息，
+		例如说通过setMaster来设置程序要链接的Spark集群的Master的URL,如果设置
+		为local，则代表Spark程序在本地运行，特别适合于机器配置条件非常差（例如只有1G的内存）的初学者
+	第2步：创建SparkContext对象
+		SparkContext是Spark程序所有功能的唯一入口，无论是采用Scala、Java、Python、R等都必须有一个SparkContext
+		SparkContext核心作用：
+		初始化Spark应用程序运行所需要的核心组件，包括DAGScheduler、TaskScheduler、SchedulerBackend
+		同时还会负责Spark程序往Master注册程序等
+		SparkContext是整个Spark应用程序中最为至关重要的一个对象
+	第3步：模拟电商访问的数据，实际情况会比模拟数据复杂很多，最后生成RDD
+	第4步：根据业务需要对数据进行预处理生成DataFrame，
+		要想把RDD转换成DataFrame，需要先把RDD中的元素类型变成Row类型
+		于此同时要提供DataFrame中的Columns的元数据信息描述
+	第5步：使用Spark SQL提供的内置函数对DataFrame进行操作
+		特别注意：内置函数生成的Column对象且自定进行CG；
+Spark SQL窗口函数解密与实战学习笔记
+1 SparkSQL窗口函数解析
+2 SparkSQL窗口函数实战
+窗口函数是Spark内置函数中最有价值的函数，因为很多关于分组的统计往往都使用了窗口函数。
+Window Aggregates (Windows)
+Window Aggregates (aka Windows) operate on a group of rows (a row set) called awindow to apply aggregation on. They calculate a value for every input row for its window.
+Note
+Window-based framework is available as an experimental feature since Spark1.4.0.
+Spark SQL supports three kinds of window aggregate function: ranking functions, analyticfunctions, and aggregate functions.
+A window specification defines the partitioning, ordering, and frame boundaries.
+Window Aggregate Functions
+A window aggregate function calculates a return value over a set of rows called windowthat are somehow related to the current row.
+Note
+Window functions are also called over functions due to how they are applied using Column’s over function.
+Although similar to aggregate functions, a window function does not group rows into a single output row and retains their separate identities. A window function can access rows that are linked to the current row.
+Tip
+See Examples section in this document.
+Spark SQL supports three kinds of window functions:
+ranking functions
+analytic functions
+aggregate functions
+Table 1. Window functions in Spark SQL (see Introducing Window Functions in Spark SQL)
+SQL
+DataFrame API
+Ranking functions
+RANK
+rank
+DENSE_RANK
+dense_rank
+PERCENT_RANK
+percent_rank
+NTILE
+ntile
+ROW_NUMBER
+row_number
+Analytic functions
+CUME_DIST
+cume_dist
+LAG
+lag
+LEAD
+lead
+For aggregate functions, you can use the existing aggregate functions as window functions, e.g. sum, avg, min, max and count.
+You can mark a function window by OVER clause after a function in SQL, e.g. avg(revenue) OVER (…​) or over method on a function in the Dataset API, e.g. rank().over(…​).
+When executed, a window function computes a value for each row in a window.
+Note
+Window functions belong to Window functions group in Spark’s Scala API.
+窗口函数中最重要的是row_number。row_bumber是对分组进行排序，所谓分组排序就是说在分组的基础上再进行排序。
 
 
 

@@ -6,8 +6,6 @@ import org.apache.spark.{SparkConf, SparkContext}
 /**
 	* SQL2Hive
 	*/
-class SQL2Hive {
-}
 object SQL2Hive {
 	def main(args: Array[String]): Unit = {
 		val conf = new SparkConf()

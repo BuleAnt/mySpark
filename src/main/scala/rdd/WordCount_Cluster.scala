@@ -31,8 +31,8 @@ object WordCount_Cluster {
 			* RDD的创建基本有三种方式:根据外部数据来源(例如HDFS),根据Scala集合,由其他的RDD操作产生
 			* 数据会被RDD划分成为一系列的Partitions,分配到每个Partition数据属于一个Task的处理范畴
 			*/
-		//val lines = sc.textFile("/opt/single/spark-compiled/README.md", 1) //读取本地文件,并设置为一个partition
-		val lines = sc.textFile("/home/hadoop/test/data/wordcount.txt")
+		//读取本地文件,并设置为一个partition
+		val lines = sc.textFile("/home/hadoop/Documents/workspaces/IdeaProjects/mySpark/src/main/resources/text.txt")
 		//val lines = sc.textFile("/user/spark/wc/input/data") //读取HDFS文件,并切分成不同的partition
 
 		/**
