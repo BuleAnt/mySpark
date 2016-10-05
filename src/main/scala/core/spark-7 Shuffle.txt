@@ -187,3 +187,23 @@ SParkEnv中:
 	1.如果Mapper中Task的数量过大,依旧会产生很多小文件;此时在Shuffle传递数据的过程中到Reducer端,reduce会需要同时大量的记录来进行反序列化,导致大量的内存消耗和GC的据他负担,造成系统宦帆甚至崩溃!
 	2.如果需要在分片内也进行配需的话,此时需要进行Mapper端和Reducer端的两次的排序!!!
 	3.
+
+其他参考:
+	http://blog.csdn.net/anzhsoft/article/details/41593807
+	http://blog.csdn.net/anzhsoft/article/details/41620329
+	http://blog.csdn.net/anzhsoft/article/details/41790565
+	Sort Based Shuffle实现解析
+	http://blog.csdn.net/anzhsoft/article/details/42417533
+	Shuffle Pluggable框架详解，你怎么开发自己的Shuffle Service？
+	http://blog.csdn.net/anzhsoft/article/details/42519333
+	如何解决Shuffle Write一定要落盘的问题？
+	http://blog.csdn.net/anzhsoft/article/details/42611201
+	Shuffle Read的整体流程
+	http://blog.csdn.net/anzhsoft/article/details/42637969
+	Shuffle Map Task运算结果的处理
+	http://blog.csdn.net/anzhsoft/article/details/42637953
+	Shuffle的性能调优
+	http://blog.csdn.net/anzhsoft/article/details/42837211
+
+
+

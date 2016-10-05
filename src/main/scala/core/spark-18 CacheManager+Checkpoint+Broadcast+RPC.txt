@@ -62,18 +62,39 @@ SparkContext.setCheckpointDir设定目录-->Job执行,RDD.checkpoint-->RDDCheckp
 
 Broadcast解析:
 =================================================
-1.Broadcast将数据从一个节点发送到其他节点(Driver的一张表,Executor并行执行100万个Task查询表-->Broadcast发送这张表到每个Executor-->每个Executor运行Task查询广播过来的表)
-2.类似于JavaWeb中ServletContext作用,只是Broadcast是分布式共享数据,默认只要程序运行Broadcast变量就存在,因为Broadcast底层通过BlockManager管理,但可以手动指定或配置具体周期销毁Broadcast变量
-3.Broadcast一般用于处理共享配置文件,通用的Dataset,常用的数据结构等,但不适合存放太大数据,Broadcast不会内存溢出,因为数据保存的StorageLevel是memory_and_disk方式,虽然如此,我们也不可以放太大数据在Broadcast,因为网络IO和可能的单点压力会非常大!
+1.Broadcast将数据从一个节点发送到其他节点(Driver的一张表,Executor并行执行100万个Task查询表
+	-->Broadcast发送这张表到每个Executor-->每个Executor运行Task查询广播过来的表)
+2.类似于JavaWeb中ServletContext作用,只是Broadcast是分布式共享数据,
+	默认只要程序运行Broadcast变量就存在,因为Broadcast底层通过BlockManager管理,但可以手动指定或配置具体周期销毁Broadcast变量
+3.Broadcast一般用于处理共享配置文件,通用的Dataset,常用的数据结构等,但不适合存放太大数据,
+	Broadcast不会内存溢出,因为数据保存的StorageLevel是memory_and_disk方式,
+	虽然如此,我们也不可以放太大数据在Broadcast,因为网络IO和可能的单点压力会非常大!
 4.广播Broadcast变量是只读变量,最为轻松的保持了数据的一致性!
 5.Broadcast使用:
-val broadcastVar = sc.broadcast(Array(1,2,3))
-broadcastVar.value
-6.HTTPBroadcast方式的Broadcast:最开始的时候数据放在Driver的本地系统文件中,Driver在本地会创建一个文件夹-->Driver启动HttpServer来访问文件夹中的数据,写入到BlockManager(StorageLevel:Memory_and_disk)中获得BlockId(BroadcastBlockId)-->当Executor中Task第一次要访问BroadCast变量时,通过HttpServer向Driver访问数据-->Executor中BlockManager注册该Broadcast中数据-->需要的Task再次访问Broadcast变量时,先查询BlockManager中有没有数据,如果有就直接使用,没有就再次循环以上步骤
-7.BroadcastManager用来管理BroadManager(该实例对象在SparkContext创建SparkEnv时候创建),在实例化BroadcastManager的时候会创建BroadcastFactory工厂来构建具体实际的Broadcast类型,默认情况下是TorrentBroadcastFactory
-8.HTTPBroadcast存在单点故障和网络IO性能问题,所以默认使用TorrentBroadcast的方式,开始数据在Driver中,假设A节点用了数据,B访问时候A节点就变成数据源,依次类推,都是数据源,当然是BlockManager进行管理的,数据元越多,及诶单压力大大降低
-9.TorrentBroadcast按照BLOCK_SIZE(4MB)讲Broadcast中数据划分成不同的Block,-->将分块信息(meta信息)存放到Driver的BlockManager中,同时会告诉BlocakManagerMaster说明meta信息存放完毕-->Executor需要的话,获取一份并通知BlocakManagerMaster有领完一份副本了-->BlockManagerMaster记录这份副本-->再有其他Executor获取数据时候,就有更多节点选择
-SparkContext.broadcast-->broadcastManager.newBroadcast-->TorrentBroadcastFactory.newBroadcast-->new TorrentBroadcast-->blockmanager模块部分read/write/..shuffle
+	val broadcastVar = sc.broadcast(Array(1,2,3))
+	broadcastVar.value
+6.HTTPBroadcast方式的Broadcast:
+	最开始的时候数据放在Driver的本地系统文件中,Driver在本地会创建一个文件夹
+	-->Driver启动HttpServer来访问文件夹中的数据,写入到BlockManager(StorageLevel:Memory_and_disk)中获得BlockId(BroadcastBlockId)
+	-->当Executor中Task第一次要访问BroadCast变量时,通过HttpServer向Driver访问数据
+	-->Executor中BlockManager注册该Broadcast中数据
+	-->需要的Task再次访问Broadcast变量时,先查询BlockManager中有没有数据,如果有就直接使用,没有就再次循环以上步骤
+7.BroadcastManager用来管理BroadManager(该实例对象在SparkContext创建SparkEnv时候创建),
+	在实例化BroadcastManager的时候会创建BroadcastFactory工厂来构建具体实际的Broadcast类型,默认情况下是TorrentBroadcastFactory
+8.HTTPBroadcast存在单点故障和网络IO性能问题,
+	所以默认使用TorrentBroadcast的方式,开始数据在Driver中,
+	假设A节点用了数据,B访问时候A节点就变成数据源,依次类推,都是数据源,当然是BlockManager进行管理的,数据元越多,及诶单压力大大降低
+9.TorrentBroadcast按照BLOCK_SIZE(4MB)讲Broadcast中数据划分成不同的Block
+	-->将分块信息(meta信息)存放到Driver的BlockManager中,同时会告诉BlocakManagerMaster说明meta信息存放完毕
+	-->Executor需要的话,获取一份并通知BlocakManagerMaster有领完一份副本了
+	-->BlockManagerMaster记录这份副本
+	-->再有其他Executor获取数据时候,就有更多节点选择
+源码调用:
+	SparkContext.broadcast-->broadcastManager.newBroadcast
+	-->TorrentBroadcastFactory.newBroadcast-->new TorrentBroadcast-->blockmanager模块部分read/write/..shuffle
+其他参考:
+	http://blog.csdn.net/w412692660/article/details/43639683
+
 
 Spark RPC
 =================================
@@ -89,3 +110,7 @@ RpcCallContext:处理Rpc异常
 3.RpcEnvFactory是负责创建RpcEnv的,通过create方法创建RpcEnv实例对象,默认是Netty:
 4.RpcEndpoint生命周期:构造Constructor-->启动onStart-->消息接收receive-->停止onStop
 RpcEndpointRef代理模式
+
+其他参考:Client，Master和Worker 通信源码解析(1.0.0版本)
+	http://blog.csdn.net/anzhsoft/article/details/30802603
+

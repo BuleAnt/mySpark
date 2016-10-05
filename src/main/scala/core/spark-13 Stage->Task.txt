@@ -35,7 +35,6 @@ DAGSchedulerEventProcessLoop类中:
 	5.在hadleJobSubmitted中首先创建finalStage,创建finalStage时候会建立父Stage的依赖关系链条;
 	 finalStage = newResultStage(finalRDD, func, partitions, jobId, callSite)
 
-
 	补充说明:所谓的missing就是说要进行当前的计算了例如:
 	 /** Returns the sequence of partition ids that are missing (i.e. needs to be computed). */
   def findMissingPartitions(): Seq[Int]
@@ -88,3 +87,5 @@ DAGSchedulerEventProcessLoop类中:
    
    3.DAGSCheduler计算数据本地性的时候,巧妙的借助了RDD自身的getPreferedLocations中的数据,最大化的优化效率,以为getPreferedLocations中表明了每个Parititon的数据本地性,虽然当前Partition可能被persist或者checkpoint,但是persist或者checkpoint默认情况下肯定是和getPreferedLocations中的Partition的数据本地性是一致的,所以这就极大的简化Task数据本地性算法的实现和效率的优化;
 	
+其他参考:Stage划分及提交源码分析
+	http://blog.csdn.net/anzhsoft/article/details/39859463

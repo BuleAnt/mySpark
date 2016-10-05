@@ -298,3 +298,5 @@ removeDriver源码:
       }
     }
 
+其他参考:Master基于ZooKeeper的High Availability（HA）源码实现
+	http://blog.csdn.net/anzhsoft/article/details/33740737

@@ -6,13 +6,15 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructType, StructField, StringType}
 
 /**
-	* Created by hadoop on 16-10-3.
+	* sqlContext.createDataFrame的方式
+	* rdd-->map(Row)-->row RDD
+	* -->sqlContext.createDataFrame(代码构建StructType,rowRDD)-->DataFrame
 	*/
 object RDD2DFMatically {
 
 	def main(args: Array[String]): Unit = {
 		val conf = new SparkConf()
-		conf.setAppName("RDD2DataFrameByProgrammaticallyScala")
+		conf.setAppName("RDD2DFMatically")
 		conf.setMaster("local")
 		val sc = new SparkContext(conf)
 		val sqlContext = new SQLContext(sc)

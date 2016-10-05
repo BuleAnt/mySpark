@@ -6,7 +6,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 /**
 	* 使用scala编写DataFrame
 	*/
-object DataFrameOps {
+object DFOps {
 	def main(args: Array[String]) {
 		val conf = new SparkConf()
 

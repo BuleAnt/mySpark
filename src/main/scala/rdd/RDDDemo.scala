@@ -78,7 +78,6 @@ object RDDDemo {
 
 	}
 
-
 	//通过list/iterator迭代创建一个新的list返回其iterator/list
 	def toNewList[T](it: Iterator[T]): Iterator[(T, T)] = {
 		var res = List[(T, T)]()

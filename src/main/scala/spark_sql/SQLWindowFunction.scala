@@ -6,6 +6,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 /**
 	* GroupTopN in Spark SQL Window Function:
 	* row_number() OVER (PARTITION BY name ORDER BY score DESC
+	* row_number方法，相当于groupTopN。分组排序应用非常广泛。
 	*/
 object SQLWindowFunction {
 	def main(args: Array[String]): Unit = {

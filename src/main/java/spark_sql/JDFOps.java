@@ -8,7 +8,7 @@ import org.apache.spark.sql.SQLContext;
 /**
  * 使用Java方式开发实战对DataFrame的操作
  */
-public class JDataFrameOps {
+public class JDFOps {
 	public static void main(String[] args) {
 		// 创建SparkConf用于读取系统配置信息并设置当前应用程序的名字
 		SparkConf conf = new SparkConf().setAppName("DataFrame").setMaster("local");

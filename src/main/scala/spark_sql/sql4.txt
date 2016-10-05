@@ -65,6 +65,8 @@ insert into result values('string',1,2);
 	指定输出路径,jar名称后保存,Build-->Build Artifacts
 	启动环境:hive –service metastore &
 	脚本See: hiveContext.sh
+	其他参考:
+		https://cwiki.apache.org/confluence/display/Hive/Hive+on+Spark
 
 四: SparkSQL内置函数
 	1 SparkSQL内置函数解析
@@ -117,54 +119,99 @@ insert into result values('string',1,2);
 		于此同时要提供DataFrame中的Columns的元数据信息描述
 	第5步：使用Spark SQL提供的内置函数对DataFrame进行操作
 		特别注意：内置函数生成的Column对象且自定进行CG；
-Spark SQL窗口函数解密与实战学习笔记
-1 SparkSQL窗口函数解析
-2 SparkSQL窗口函数实战
-窗口函数是Spark内置函数中最有价值的函数，因为很多关于分组的统计往往都使用了窗口函数。
-Window Aggregates (Windows)
-Window Aggregates (aka Windows) operate on a group of rows (a row set) called awindow to apply aggregation on. They calculate a value for every input row for its window.
-Note
-Window-based framework is available as an experimental feature since Spark1.4.0.
-Spark SQL supports three kinds of window aggregate function: ranking functions, analyticfunctions, and aggregate functions.
-A window specification defines the partitioning, ordering, and frame boundaries.
-Window Aggregate Functions
-A window aggregate function calculates a return value over a set of rows called windowthat are somehow related to the current row.
-Note
-Window functions are also called over functions due to how they are applied using Column’s over function.
-Although similar to aggregate functions, a window function does not group rows into a single output row and retains their separate identities. A window function can access rows that are linked to the current row.
-Tip
-See Examples section in this document.
-Spark SQL supports three kinds of window functions:
-ranking functions
-analytic functions
-aggregate functions
-Table 1. Window functions in Spark SQL (see Introducing Window Functions in Spark SQL)
-SQL
-DataFrame API
-Ranking functions
-RANK
-rank
-DENSE_RANK
-dense_rank
-PERCENT_RANK
-percent_rank
-NTILE
-ntile
-ROW_NUMBER
-row_number
-Analytic functions
-CUME_DIST
-cume_dist
-LAG
-lag
-LEAD
-lead
-For aggregate functions, you can use the existing aggregate functions as window functions, e.g. sum, avg, min, max and count.
-You can mark a function window by OVER clause after a function in SQL, e.g. avg(revenue) OVER (…​) or over method on a function in the Dataset API, e.g. rank().over(…​).
-When executed, a window function computes a value for each row in a window.
-Note
-Window functions belong to Window functions group in Spark’s Scala API.
-窗口函数中最重要的是row_number。row_bumber是对分组进行排序，所谓分组排序就是说在分组的基础上再进行排序。
+	Code See:SQL2Hive.scala
+	导出后使用shell/hive_join.sh在集群运行(idea可以按照shell插件直接执行)
+
+五: Spark SQL窗口函数
+	窗口函数是Spark内置函数中最有价值的函数，因为很多关于分组的统计往往都使用了窗口函数。
+	Spark SQL supports three kinds of window functions:
+		ranking functions
+		analytic functions
+		aggregate functions
+	Table 1. Window functions in Spark SQL (see Introducing Window Functions in Spark SQL)
+		Ranking functions
+			SQL         DataFrame API
+			RANK            rank
+			DENSE_RANK      dense_rank
+			PERCENT_RANK    percent_rank
+			NTILE           ntile
+			ROW_NUMBER      row_number
+		Analytic functions
+			SQL         DataFrame API
+			CUME_DIST       cume_dist
+			LAG             lag
+			LEAD            lead
+	For aggregate functions, you can use the existing aggregate functions as window functions,
+	    e.g. sum, avg, min, max and count.
+	You can mark a function window by OVER clause after a function in SQL,
+	    e.g. avg(revenue) OVER (…​) or over method on a function in the Dataset API, e.g. rank().over(…​).
+	When executed, a window function computes a value for each row in a window.
+	窗口函数中最重要的是row_number。row_bumber是对分组进行排序，所谓分组排序就是说在分组的基础上再进行排序。
+	Coding:See SQLWindowFunction.scala
+	导出后使用shell/row_number.sh在集群运行(idea可以按照shell插件直接执行)
+
+六：Spark UDF和UDAF
+	UDF:用户自定义函数,实现上就是普通scala函数
+	UDAF:USER DEFINE AGGREGATE FUNCTION用户自定义聚合函数
+	实质上,例如UDF会被SparkSQL中的Catalyst封装成为Expression,
+	最终通过eval方法来计算输入的数据Row(此处的Row和DataFrame中的Row没关系)
+	Spark SQL UDF和UDAF解决的问题,已有内置函数不足的问题,UDFA可以对数据集合进行操作,Aggregate:聚合
+	See: SQLUDFUDAF.scala
+
+七: Spark SQL Thrift Server JDBC编程
+	目标：希望操作人员能web操作简单的SQL，通过Thrift Server可以从Web的角度来访问Server
+	企业经典架构流程：通过JDBC/ODBC --> Thrift Server --> Spark SQL --> Hive数据仓库
+	如果使用实时性要求不是特别高的情况下,一般可以取代传统数据库为后台的数据处理系统
+	官方doc:
+	http://spark.apache.org/docs/1.6.1/sql-programming-guide.html#running-the-thrift-jdbcodbc-server
+	thrift server的启动顺序:先在hive的server端启动Hive Metastore Server服务:
+	hive --service metastore &
+	然后在spark集群启动thriftserver,可以指定一下参数:spark集群master,hive节点的ip和host
+	sbin/start-thriftserver.sh
+	--master spark://hadoop:7077
+	--hiveconf hive.server2.thrift.port=10000
+	--hiveconf hive.server2.bind.host=hadoop
+	通过shell脚本和log日志发现其内部执行的是org.apache.spark.sql.hive.thriftserver.HiveThriftServer2
+	其实是启动了hive中的HiveThriftServer2
+		但是与hive启动的thrift不同(即hive中命令启动的thrift: hive --service hiveserver2服务),
+		关于两中thrift总结来说,就是通过启动thrift使用的是它自己的执行引擎,
+		而beeline只是一个连接thrift server的client,本质是一样的,连接到谁的thrift就会使用谁的执行引擎
+	spark是启动了一个spark App,内部通过spark的rdd执行sql
+		另外关于权限问题:
+		hive thrift server如果username输入的不是hadoop集群的用户(权限700),将在执行查新执行mr的时候报错:
+		org.apache.hadoop.ipc.RemoteException(org.apache.hadoop.security.AccessControlException):
+		Permission denied: user=anonymous, access=EXECUTE,
+		inode="/tmp/hadoop-yarn/staging/anonymous/.staging/job_1475653852498_0002":
+		hadoop:supergroup:drwx------
+		除了在连接时候指定外可以在hive-site中指定,参考:
+		http://www.2cto.com/database/201309/244658.html
+	如此成功启动了hive thrift,然后可以打开一个beeline,相当于一个客户端,输入链接命令链接到hive
+	bin/beeline
+beeline> !connect jdbc:hive2://localhost:10000
+INFO HiveConnection: Will try to open client transport with JDBC Uri: jdbc:hive2://localhost:10000
+Connected to: Spark SQL (version 1.6.1)
+Driver: Spark Project Core (version 1.6.1)
+Transaction isolation: TRANSACTION_REPEATABLE_READ
+0: jdbc:hive2://localhost:10000>
+	默认账户密码随便输入都可以,企业级别一般会设置,出现以上提示表示链接成功,如此可以像在hive的shell中一样操作hive
+	随便执行一个查询操作比如:select count(name) from spark.scores;
+	打开Application Spark-Shell的webUI:http://192.168.0.3:4040/jobs/
+	能够查看到其在spark中执行的是rdd
+	beeline的退出方式!q或者!quit/!exit等
+
+	HiveThriftServer2代码:
+	/**
+	 * The main entry point for the Spark SQL port of HiveServer2.  Starts up a `SparkSQLContext` and a
+	 * `HiveThriftServer2` thrift server.
+	 */
+	SparkSQLEnv.init()--> new SparkConf(loadDefaults = true)
+		new HiveContext(sparkContext)...
+	val server = new HiveThriftServer2(SparkSQLEnv.hiveContext)
+	这里就是说spark中执行该sql,不是通过hadoop的mr执行,是通过rdd,这就会比hive快
+
+
+
+
 
 
 

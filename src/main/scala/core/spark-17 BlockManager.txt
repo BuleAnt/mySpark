@@ -74,4 +74,5 @@ BlockManager.initialize(){
 				  register(blockManagerId, maxMemSize, slaveEndpoint)
 				  context.reply(true)
 	
-	
+其他参考:Storage 模块整体架构 
+	http://blog.csdn.net/anzhsoft/article/details/42837245

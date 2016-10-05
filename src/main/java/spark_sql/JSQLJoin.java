@@ -20,12 +20,12 @@ import java.util.List;
 
 
 /**
- * JSQLwithJoin
+ * JSQLJoin
  */
-public class JSQLwithJoin {
+public class JSQLJoin {
 
 	public static void main(String[] args) {
-		SparkConf conf = new SparkConf().setMaster("local").setAppName("JSQLwithJoin");
+		SparkConf conf = new SparkConf().setMaster("local").setAppName("JSQLJoin");
 		JavaSparkContext sc = new JavaSparkContext(conf);
 		SQLContext sqlContext = new SQLContext(sc);
 
@@ -84,14 +84,14 @@ public class JSQLwithJoin {
 					@Override
 					public Tuple2<String, Integer> call(Row row) throws Exception {
 						//Integer.valueOf(String.valueOf(row.getAs("score")))
-						return new Tuple2<String, Integer>((String) row.getAs("name"), Integer.valueOf(String.valueOf(row.getAs("score"))));
+						return new Tuple2<>((String) row.getAs("name"), Integer.valueOf(String.valueOf(row.getAs("score"))));
 					}
 				}).join(execellentNameAgeDF.javaRDD().mapToPair(new PairFunction<Row, String, Integer>() {
 					private static final long serialVersionUID = 1L;
 
 					@Override
 					public Tuple2<String, Integer> call(Row row) throws Exception {
-						return new Tuple2<String, Integer>((String) row.getAs("name"), Integer.valueOf(String.valueOf(row.getAs("age"))));
+						return new Tuple2<>((String) row.getAs("name"), Integer.valueOf(String.valueOf(row.getAs("age"))));
 					}
 				}));
 
@@ -106,7 +106,7 @@ public class JSQLwithJoin {
 				});
 
 		// RDD-->DataFrame,先组装RDD的StructField
-		List<StructField> structFields = new ArrayList<StructField>();
+		List<StructField> structFields = new ArrayList<>();
 		structFields.add(DataTypes.createStructField("name", DataTypes.StringType, true));
 		structFields.add(DataTypes.createStructField("age", DataTypes.IntegerType, true));
 		structFields.add(DataTypes.createStructField("score", DataTypes.IntegerType, true));

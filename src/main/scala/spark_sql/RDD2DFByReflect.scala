@@ -4,7 +4,8 @@ import org.apache.spark.sql.SQLContext
 import org.apache.spark.{SparkConf, SparkContext}
 
 /**
-	* Created by hadoop on 16-10-2.
+	* (implicits) toDF的方式
+	* RDD-->map(case class)-->row RDD-->(implicits)toDF-->DataFrame
 	*/
 object RDD2DFByReflect {
 
@@ -15,11 +16,11 @@ object RDD2DFByReflect {
 		conf.setAppName("RDD2DataFrameByProgrammaticallyScala").setMaster("local")
 		val sc = new SparkContext(conf)
 		val sqlContext = new SQLContext(sc)
+
 		import sqlContext.implicits._
-
-
 		val people = sc.textFile("src/main/resources/persons.txt").map(_.split(","))
 			.map(p => Person(p(0).trim.toInt, p(1), p(2).trim.toInt)).toDF()
+		//sqlContext.createDataFrame(rdd)不需要隐式转换
 
 		people.registerTempTable("people")
 

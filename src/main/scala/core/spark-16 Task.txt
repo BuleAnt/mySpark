@@ -103,3 +103,5 @@ Executor会通过TaskRunner在ThreadPool来运行具体的Task,TaskRUnner内部�
 		 // Limit of bytes for total size of results (default is 1GB)
 	 	 -->private val maxResultSize = Utils.getMaxResultSize(conf)
 
+其他参考:Task向Executor提交的源码解析
+	http://blog.csdn.net/anzhsoft/article/details/40238111

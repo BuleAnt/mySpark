@@ -29,3 +29,6 @@ override def receive: PartialFunction[Any, Unit] = synchronized {
 	1.Cluster中Driver失败的时候,如果supervise为true,则启动该Driver的Worker会负责重新启动该Driver
 	2.DriveRunner启动进程是通过ProcessBuilder中的process.get.waitFor()来完成
 	3.
+
+其他参考:
+	http://blog.csdn.net/anzhsoft/article/details/38358817
