@@ -119,6 +119,7 @@ insert into result values('string',1,2);
 		于此同时要提供DataFrame中的Columns的元数据信息描述
 	第5步：使用Spark SQL提供的内置函数对DataFrame进行操作
 		特别注意：内置函数生成的Column对象且自定进行CG；
+
 	Code See:SQL2Hive.scala
 	导出后使用shell/hive_join.sh在集群运行(idea可以按照shell插件直接执行)
 
@@ -147,6 +148,7 @@ insert into result values('string',1,2);
 	    e.g. avg(revenue) OVER (…​) or over method on a function in the Dataset API, e.g. rank().over(…​).
 	When executed, a window function computes a value for each row in a window.
 	窗口函数中最重要的是row_number。row_bumber是对分组进行排序，所谓分组排序就是说在分组的基础上再进行排序。
+
 	Coding:See SQLWindowFunction.scala
 	导出后使用shell/row_number.sh在集群运行(idea可以按照shell插件直接执行)
 
@@ -156,7 +158,8 @@ insert into result values('string',1,2);
 	实质上,例如UDF会被SparkSQL中的Catalyst封装成为Expression,
 	最终通过eval方法来计算输入的数据Row(此处的Row和DataFrame中的Row没关系)
 	Spark SQL UDF和UDAF解决的问题,已有内置函数不足的问题,UDFA可以对数据集合进行操作,Aggregate:聚合
-	See: SQLUDFUDAF.scala
+
+	Code See: SQLUDFUDAF.scala
 
 七: Spark SQL Thrift Server JDBC编程
 	目标：希望操作人员能web操作简单的SQL，通过Thrift Server可以从Web的角度来访问Server
@@ -164,6 +167,7 @@ insert into result values('string',1,2);
 	如果使用实时性要求不是特别高的情况下,一般可以取代传统数据库为后台的数据处理系统
 	官方doc:
 	http://spark.apache.org/docs/1.6.1/sql-programming-guide.html#running-the-thrift-jdbcodbc-server
+
 	thrift server的启动顺序:先在hive的server端启动Hive Metastore Server服务:
 	hive --service metastore &
 	然后在spark集群启动thriftserver,可以指定一下参数:spark集群master,hive节点的ip和host
@@ -173,11 +177,36 @@ insert into result values('string',1,2);
 	--hiveconf hive.server2.bind.host=hadoop
 	通过shell脚本和log日志发现其内部执行的是org.apache.spark.sql.hive.thriftserver.HiveThriftServer2
 	其实是启动了hive中的HiveThriftServer2
-		但是与hive启动的thrift不同(即hive中命令启动的thrift: hive --service hiveserver2服务),
-		关于两中thrift总结来说,就是通过启动thrift使用的是它自己的执行引擎,
-		而beeline只是一个连接thrift server的client,本质是一样的,连接到谁的thrift就会使用谁的执行引擎
-	spark是启动了一个spark App,内部通过spark的rdd执行sql
-		另外关于权限问题:
+
+	org.apache.spark.sql.hive.thriftserver.HiveThriftServer2代码:
+	/**
+	 * The main entry point for the Spark SQL port of HiveServer2.  Starts up a `SparkSQLContext` and a
+	 * `HiveThriftServer2` thrift server.
+	 */
+	1.SparkSQLEnv.init()-->
+		sc = new SparkConf(loadDefaults = true)
+		hiveContext = new HiveContext(sparkContext)
+	2. val server = new HiveThriftServer2(SparkSQLEnv.hiveContext)
+	server.init(SparkSQLEnv.hiveContext.hiveconf)-->
+		addService(sparkSqlCliService)
+		thriftCliService = new ThriftHttpCLIService(sparkSqlCliService)
+			或new ThriftBinaryCLIService(sparkSqlCliService)
+			关于这两种方式配置见下文或官网doc
+		addService(thriftCliService)
+		initCompositeService(hiveConf)
+		这里:以后台方式启动thriftServer
+	server.start
+	3.listener = new HiveThriftServer2Listener(server, SparkSQLEnv.hiveContext.conf)
+	sparkContext.addSparkListener.addSparkListener(listener)
+	该监听器,用于接受client的请求,解析响应相关的事件,最终由spark处理
+	这里就是说spark中执行该sql,不是通过hadoop的mr执行,是通过rdd,这就会比hive快
+
+	spark thrift与hive thrift区别:
+		hive中命令启动的thrift: hive --service hiveserver2服务
+		两者通过启动thrift,开启一个接口,并且通用.但执行引擎使用的是它自己的
+		也就是说hive thrift执行引擎是hive中配置的,spark thrift执行引擎是spark
+		beeline只是一个连接thrift server的client,本质是都一样的,连接到谁的thrift就会使用谁的执行引擎
+	另外关于权限问题:
 		hive thrift server如果username输入的不是hadoop集群的用户(权限700),将在执行查新执行mr的时候报错:
 		org.apache.hadoop.ipc.RemoteException(org.apache.hadoop.security.AccessControlException):
 		Permission denied: user=anonymous, access=EXECUTE,
@@ -191,29 +220,44 @@ beeline> !connect jdbc:hive2://localhost:10000
 INFO HiveConnection: Will try to open client transport with JDBC Uri: jdbc:hive2://localhost:10000
 Connected to: Spark SQL (version 1.6.1)
 Driver: Spark Project Core (version 1.6.1)
-Transaction isolation: TRANSACTION_REPEATABLE_READ
-0: jdbc:hive2://localhost:10000>
+Transaction isolation: TRANSACTION_REPEATABLE_READ0: jdbc:hive2://localhost:10000>
 	默认账户密码随便输入都可以,企业级别一般会设置,出现以上提示表示链接成功,如此可以像在hive的shell中一样操作hive
 	随便执行一个查询操作比如:select count(name) from spark.scores;
 	打开Application Spark-Shell的webUI:http://192.168.0.3:4040/jobs/
 	能够查看到其在spark中执行的是rdd
 	beeline的退出方式!q或者!quit/!exit等
 
-	HiveThriftServer2代码:
-	/**
-	 * The main entry point for the Spark SQL port of HiveServer2.  Starts up a `SparkSQLContext` and a
-	 * `HiveThriftServer2` thrift server.
-	 */
-	SparkSQLEnv.init()--> new SparkConf(loadDefaults = true)
-		new HiveContext(sparkContext)...
-	val server = new HiveThriftServer2(SparkSQLEnv.hiveContext)
-	这里就是说spark中执行该sql,不是通过hadoop的mr执行,是通过rdd,这就会比hive快
+	Thrift JDBC server支持通过HTTP方式发送thrift RPC message,(hive-size.xml)设置一下参数:
+	hive.server2.transport.mode = http
+    hive.server2.thrift.http.port = 10001
+    hive.server2.http.endpoint = cliservice
+	在beeline客户端连接该thrift的命令如下:
+	beeline> !connect jdbc:hive2://localhost:10001/default?hive.server2.transport.mode=http;hive.server2.thrift.http.path=cliservice
+
+	java 版本Spark ThriftServer 的JDBC编程demo See: spark_sql.JThriftServer.java
 
 
+八: Hive on Spark业界发展
+	Hive on Spark即Hive的引擎使用Spark,
+	这个项目还在进行中,也是大数据SQL的一种解决方案。
+	仅仅从SQL的角度去考虑，最好的是Impala，最不稳定的是Hive on Spark从未来发展的趋势来看，还是很有希望的
+	Spark SQL最大的优势是能和其他框架进行整合;
+	Spark SQL+Spark Streaming或Spark Streaming +ML是未来几年的首选
+	如果只是使用SQL，首选就Impala，有速度和稳定性的优势。
+	Hive on Spark适用于Hive,是hive中的spark模块
+	官方说明See:
+	https://cwiki.apache.org/confluence/display/Hive/Hive+on+Spark%3A+Getting+Started
 
+	set hive.execution.engine=spark;
+	yarn.resourcemanager.scheduler.class=org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler
+	set spark.home=/location/to/sparkHome;
+	更多配置参考:.hiverc
+	http://www.cnblogs.com/linbingdong/p/5806329.html
 
-
-
+	基本流程:
+	hive的逻辑树，提交SparkTask给Spark去执行，SparkTask内部就包装了DAG。
+	DAG本身会被包装成了SparkWorker。SparkTask会根据SparkWorker封装的DAG进行计算。
+	会话客户端，连上Spark集群，每次连接都在新JVM中创建新的SparkContext。
 
 
 

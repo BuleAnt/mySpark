@@ -1,0 +1,35 @@
+Spark SQL网站搜索综合案例
+
+项目：找出搜索平台上用户每天搜索排名前5名的产品。
+
+元数据：Date、UserID、Item、City、Device。
+总体思路：混合使用了Spark SQl和Spark Core的内容
+	第一步：过滤数据后产生目标数据（原始的ETL），使用RDD的filter等进行操作（在实际企业中过滤条件非常复杂，进行广播）；
+	第二步：对过滤后的目标数据进行指定条件的查询，查询条件也有可能非常复杂（规则进行广播），使用RDD的filter算子；
+	第三步：由于商品是分为种类的，我们在得出最终结果之前，首先会基于商品进行UV（也可以基于UV进行PV分析，可看出用户个人偏好）；
+		此时对商品进行UV计算的话，必须构建K-V的RDD，
+		例如构成成为（Date#Item,userID），以方便进行groupByKey操作。字段组拼是性能优化非常关键的。
+		在调用了groupByKey之后对user进行去重，并计算出每一天每一种商品的UV。计算出来的数据类型为（Date#Item,uv）
+	第四步：使用开窗函数row_number OVER (PARTITION BY Date order by uv) rank 统计出每日商品UV前5名的内容。
+		此时会产生以Date、Item、uv为Row的DataFrame
+	第五步：DataFrame转成RDD，根据日期进行分组并分析出每天排名前5位的热搜Item。
+	第六步：进行Kye-Value交换，然后进行调用sortByKey进行点击热度排名；
+	第七步：再次进行Key-Value交换，得出目标数据（Date#Item,uv）;
+	第八步：通过RDD直接操作MySQL等把结果写入生产系统中的DB中，
+		在通过Server技术可视化结果以供市场营销人员，仓库调度系统，快递系统，管理决策人员使用数据创造价值；
+		当然也可以放在Hive中，Java EE等技术通过JDBC等链接访问Hive；
+		当然也可以就放在Spark SQL中，通过Thrift技术供Java EE使用等；
+		但是，如果是像双十一等时候，一般首选放在Redis中，这样可以实现类似秒杀系统的响应速度。
+
+----------------------------------------------
+贯通Spark SQL工作源码流程
+Spark SQL架构
+Spark SQL源码详解
+	数据来源是多样的，通过Spark SQL的引擎执行的话，需要首先被语法解析器解析成UnResolved Logical Plan，
+	在语法解析器的基础上进一步解析这课语法树，生成Logical Plan，
+	然后进行语法的优化，生成Optimized Logical Plan，现在还是逻辑层面的，
+	然后Planning Strategies进行物化，到底层的rdd。
+
+	action触发一些列操作（对SQL解析，优化，物化）。
+	在Spark 1.6.1版本中UnResolved Logical Plan已经被合并了，没有再出现了。
+	谓词下推，函数式编程的标志之一，延缓执行，更多的优化空间。

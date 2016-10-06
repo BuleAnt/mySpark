@@ -1,0 +1,140 @@
+Spark SQL基于网站Log的综合案例实战
+	pv,uv,用户跳出率,网页设计,新用户注册率
+	任务调度器:
+	(linux自带的crontab),oozie airflow等调度器，需要安装在安装了Spark客户端的机器上。
+	定时任务,调度shell脚本来在特定时间点运行提交程序。
+	Spark SQL多维度分析处理完的结果一般放在数据库中，比如DB中如MySQL。
+	然后基于java ee来进行各种曲线统计展示等,放数据库中，支持实时查询处理。
+	较大的公司由于业务复杂,一般没有单独的调度器
+
+	数据来源：
+		Sogou实验室，国外开源实验室都开放了很多数据。
+		http://www.datatang.com/org/73042
+
+drop table if exists user_logs;
+create table user_logs(
+date string,
+timestamp bigint,
+user_id bigint,
+page_id bigint,
+channel string,
+action string
+)row format delimited
+fields terminated by '\t' lines terminated by '\n';
+load data local inpath '/home/hadoop/Documents/workspaces/IdeaProjects/mySpark/target/out/userLog.log'overwrite into table user_logs;
+
+
+
+spark-sql
+select date,page_id,count(1) pv from user_logs
+where action = 'View'
+group by date,page_id and date = '2016-10-05' order by pv desc limit 10;
+
+spark-shell
+sqlContext.sql("use spark")
+sqlContext.sql("drop table if exists user_logs")
+var sql = "create table user_logs"
+sql +="(date string,timestamp bigint,user_id bigint,page_id bigint,channel string,action string)"
+sql +="row format delimited fields terminated by '\t' lines terminated by '\n'"
+sqlContext.sql(sql)
+
+sqlContext.sql("create table user_logs(date string,timestamp bigint,user_id bigint,page_id bigint,channel string,action string)row format delimited fields terminated by '\t' lines terminated by '\n'")
+
+sqlContext.sql("use spark")
+sqlContext.sql("load data local inpath '/home/hadoop/Documents/workspaces/IdeaProjects/mySpark/target/out/userLog.log'overwrite into table user_logs")
+sqlContext.sql("desc user_logs").show
+pv:
+以date,page_id分组
+sqlContext.sql("select date,page_id,count(1) pv from user_logs where action = 'View' and date = '2016-10-05' group by date,page_id order by pv desc limit 10").show
+uv:(pv对用户id去重)
+sqlContext.sql("select date,page_id,count(distinct(user_id)) uv from user_logs where action = 'View' and date = '2016-10-05' group by date, page_id order by uv desc limit 10").show
+group by 方式
+	出现数据倾斜的现象Spark 1.6.0
+	group by也会出现数据倾斜。spark 1.6.1不会出现。
+sqlContext.sql("select date, page_id ,count(1)uv from( select date,page_id,user_id from user_logs where action = 'View'and date = '2016-10-05' group by date,page_id,user_id ) u group by date,page_id order by uv desc limit 10").show
+
+beeline:同上
+
+实例:
+scala> sqlContext.sql("use spark")
+res0: org.apache.spark.sql.DataFrame = [result: string]
+
+scala> sqlContext.sql("select date,page_id,count(1) pv from user_logs where action = 'View' and date = '2016-10-05' group by date,page_id order by pv desc limit 10").show
+启动执行:
+16/10/06 18:46:16 INFO DAGScheduler: Job 0 finished: show at <console>:26, took 4.635923 s
+重复执行:
+16/10/06 18:48:58 INFO DAGScheduler: Job 4 finished: show at <console>:26, took 0.800588 s
++----------+-------+-----+
+|      date|page_id|   pv|
++----------+-------+-----+
+|2016-10-05|      5|12660|
+|2016-10-05|      6|12635|
+|2016-10-05|     19|12603|
+|2016-10-05|     18|12599|
+|2016-10-05|      4|12545|
+|2016-10-05|     15|12521|
+|2016-10-05|     12|12506|
+|2016-10-05|      3|12499|
+|2016-10-05|     10|12498|
+|2016-10-05|     11|12479|
++----------+-------+-----+
+
+
+scala> sqlContext.sql("select date,page_id,count(distinct(user_id)) uv from user_logs where action = 'View' and date = '2016-10-05' group by date, page_id order by uv desc limit 10").show
+启动执行:
+16/10/06 18:53:54 INFO DAGScheduler: Job 0 finished: show at <console>:26, took 8.028250 s
+sql后执行
+16/10/06 18:47:17 INFO DAGScheduler: Job 1 finished: show at <console>:26, took 4.431181 s
+二次执行:
+16/10/06 18:49:27 INFO DAGScheduler: Job 5 finished: show at <console>:26, took 2.656876 s
++----------+-------+-----+
+|      date|page_id|   uv|
++----------+-------+-----+
+|2016-10-05|      5|11213|
+|2016-10-05|      6|11167|
+|2016-10-05|     19|11121|
+|2016-10-05|     18|11113|
+|2016-10-05|      4|11063|
+|2016-10-05|     12|11055|
+|2016-10-05|      3|11051|
+|2016-10-05|      9|11040|
+|2016-10-05|     15|11032|
+|2016-10-05|     11|11020|
++----------+-------+-----+
+
+
+scala> sqlContext.sql("select date, page_id ,count(1)uv from( select date,page_id,user_id from user_logs where action = 'View'and date = '2016-10-05' group by date,page_id,user_id ) u group by date,page_id order by uv desc limit 10").show
+启动执行:
+16/10/06 18:51:54 INFO DAGScheduler: Job 0 finished: show at <console>:26, took 7.873160 s
+sql后执行:
+16/10/06 18:47:45 INFO DAGScheduler: Job 2 finished: show at <console>:26, took 2.958622 s
+二次执行:
+16/10/06 18:50:11 INFO DAGScheduler: Job 8 finished: show at <console>:26, took 2.501871 s
++----------+-------+-----+
+|      date|page_id|   uv|
++----------+-------+-----+
+|2016-10-05|      5|11213|
+|2016-10-05|      6|11167|
+|2016-10-05|     19|11121|
+|2016-10-05|     18|11113|
+|2016-10-05|      4|11063|
+|2016-10-05|     12|11055|
+|2016-10-05|      3|11051|
+|2016-10-05|      9|11040|
+|2016-10-05|     15|11032|
+|2016-10-05|     11|11020|
++----------+-------+-----+
+
+用户跳出率:
+只有一次View事件的UserID的统计
+val sql = "from (select user_id ,count(user_id) num from spark.user_logs where action ='View' and date ='2016-10-05' group by user_id ) t select count(user_id) where num = 1 "
+val result =sqlContext.sql(sql).collect
+val sql="select count(*) from spark.user_logs"
+val total = sqlContext.sql(sql).collect
+val v = result(0)(0).asInstanceOf[Long]*1.0/total(0)(0).asInstanceOf[Long]
+result(0)(0).toString.toDouble/total(0)(0).toString.toDouble
+BigDecimal.valueOf
+
+新注册的用户:
+val sql = "select count(*) from user_logs where action ='Register' and data = '2016-10-05'"
+sqlContext.sql(sql).show

@@ -15,7 +15,7 @@ import java.sql.ResultSet;
 public class JThriftServer {
 	public static void main(String[] args) {
 
-		String sql ="select name from students where age = ?";
+		String sql ="select name from spark.students where age = ?";
 		Connection conn = null;
 		ResultSet resultSet = null;
 		try {
@@ -23,7 +23,7 @@ public class JThriftServer {
 			//hive server2的驱动为org.apache.hive.jdbc.HiveDriver
 			Class.forName("org.apache.hive.jdbc.HiveDriver");
 			// 通过http方式发现送thrift RPC message;用户名为hadoop集群的superuser,我的是hadoop,密码随意
-			conn = DriverManager.getConnection("jdbc:hive2://hadoop:10000/spark?" +
+			conn = DriverManager.getConnection("jdbc:hive2://hadoop:10001/spark?" +
 					"hive.server2.transport.mode=http;hive.server2.thrift.http.path=cliservice","hadoop","");
 			PreparedStatement preparedStatement = conn.prepareStatement(sql); // prepareStatement防注入
 
