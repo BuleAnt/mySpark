@@ -24,7 +24,7 @@ object RDDDemo {
 		listRDD.collect.foreach(println)
 
 		//textFile指定path读取数据创建RDD
-		val textRDD = sc.textFile("src/main/resources/text.txt")
+		val textRDD = sc.textFile("src/test/resources/text.txt")
 		textRDD.collect.foreach(println)
 
 		/**

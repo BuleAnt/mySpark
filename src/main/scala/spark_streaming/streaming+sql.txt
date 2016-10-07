@@ -1,0 +1,26 @@
+SparkStreaming+SparkSQL实现实战：
+    String+SQL技术实现解析
+    Streaming+SQL实现实战
+
+一：SparkString+SparkSQL技术实现解析：
+
+使用Spark Streaming + Spark SQL 来在线计算电商中不同类别中最热门的商品排名，例如手机这个类别下面最热门的三种手机、电视
+这个类别下最热门的三种电视，该实例在实际生产环境下具有非常重大的意义；
+实现技术：SparkStreaming+Spark SQL,之所以SparkStreaming能够使用ML、sql、graphx等功能是因为有foreach何Transformation等
+接口，这些接口中其实是基于RDD进行操作的，所以以RDD为基石，就可以直接使用Spark其他所有的功能，就像直接调用API一样简单， 假设说这里的数据的格式：user item category，例如Rocky Samsung Android
+
+二：SparkStreaming+SparkSQL实现实战：
+OnlineTheTop3ItemForEachCategory2DB.scala
+2. 接下来将代码打包放到集群中，并且写好shell脚本
+
+/usr/local/spark/bin/spark-submit --files /usr/local/hive/conf/hive-site.xml --driver-class-path /usr/local/spark/lib/mysql-connector-java-5.1.35-bin.jar
+/root/Documents/SparkApps/SparkStreamingApps.jar
+3、启动集群以及Hive 服务：
+
+hive --service metastore &
+4、进入MySQL中创建表：
+
+create table categorytop3 (category varchar(500),item varchar(2000),client_count int);
+5、启动作业，以及打开nc -lk 9999服务
+
+6、观察结果：

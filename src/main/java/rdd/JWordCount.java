@@ -87,7 +87,8 @@ public final class JWordCount {
 		//TextFile-->RDD
 		JavaRDD<String> lines = sc.textFile("src/main/resources/wordcount.sh");
 
-		//RDD.map(_.split(" "))
+		//RDD.flatMap(_.split(" "))
+		//{line1,line2,...}-->{word,word..}
 		JavaRDD<String> words = lines
 				.flatMap(new FlatMapFunction<String, String>() {
 					@Override
@@ -97,17 +98,19 @@ public final class JWordCount {
 				});
 
 		//RDD.mapToPair-->PairRDD
+		//{word1,word2..}-->{(word1,1),(..)..}
 		JavaPairRDD<String, Integer> pairs = words
 				.mapToPair(new PairFunction<String, String, Integer>() {
 
 					@Override
 					public Tuple2<String, Integer> call(String word)
 							throws Exception {
-						return new Tuple2<String, Integer>(word, 1);
+						return new Tuple2<>(word, 1);
 					}
 				});
 
 		//PairRDD.reduceByKey(_+_)
+		//{(word1,1),(word1,1)..}-->{word1,2)..}
 		JavaPairRDD<String, Integer> wordsCount = pairs
 				.reduceByKey(new Function2<Integer, Integer, Integer>() {
 

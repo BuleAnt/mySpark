@@ -5,14 +5,13 @@ import org.apache.spark.streaming.kafka.KafkaUtils
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.{SparkConf, SparkContext}
 
-
 /**
-	* Created by hadoop on 16-8-16.
-	*/
+  * KafkaDataTest
+  */
 object KafkaDataTest {
 	def main(args: Array[String]): Unit = {
-		org.apache.log4j.Logger.getLogger("org.apache.spark").setLevel(org.apache.log4j.Level.WARN);
-		org.apache.log4j.Logger.getLogger("org.eclipse.jetty.server").setLevel(org.apache.log4j.Level.ERROR);
+		org.apache.log4j.Logger.getLogger("org.apache.spark").setLevel(org.apache.log4j.Level.WARN)
+		org.apache.log4j.Logger.getLogger("org.eclipse.jetty.server").setLevel(org.apache.log4j.Level.ERROR)
 
 		val conf = new SparkConf().setAppName("stocker").setMaster("local[2]")
 		val sc = new SparkContext(conf)
@@ -35,11 +34,9 @@ object KafkaDataTest {
 		val urlClickCountDaysDStream = urlClickLogPairsDStream.reduceByKeyAndWindow(
 			(v1: Int, v2: Int) => {
 				v1 + v2
-			},
-			Seconds(60),
-			Seconds(5));
+			}, Seconds(60), Seconds(5))
 
-		urlClickCountDaysDStream.print();
+		urlClickCountDaysDStream.print()
 
 		ssc.start()
 		ssc.awaitTermination()

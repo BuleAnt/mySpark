@@ -1,0 +1,13 @@
+动手实战联合使用Spark Streaming、Broadcast、Accumulator计数器实现在线黑名单过滤和计数
+1、Spark Streaming与Broadcast、Accumulator联合
+2、在线黑名单过滤和计数实战
+
+一、Spark Streaming与Broadcast、Accumulator联合：
+
+在企业实战中，广播本身广播到集群的时候，联合上计数器的话就有很大杀伤力，这时候你可以自定义，例如自定义广播中的内容，可以实现非常复杂的内容。
+
+之所以广播和计数器特别重要，一方面鉴于广播和计数器本身的特性，另一方面广播和计数器可以说实现非常复杂的操作。在线黑名单过滤实战中，将黑名单放在广播中，有Accumulator你可以计数黑名单。
+
+二、在线黑名单过滤和计数实战：
+
+1、代码如下：

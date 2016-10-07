@@ -3,16 +3,25 @@ FIFO与FAIR两种调度模式彻底解密
 Task数据本地性资源分配源码实现
 
 一:通过Spark-shell运行程序来观察TaskScheduler内幕
-	1.当我们启动Spark-shell本身的时候命令终端反馈回来的主要是ClientEndpoint和SparkDeploySchedulerBackend,这是因为此时还没有任何Job的触发,这是启动Application本身而已,所以主要就是实例化SparkContext并注册当前的应用程序给Master且从集群中获得ExecutorBackend计算资源;
-	2.DAGScheduler划分好Stage后会通过TaskSchedulerImpl中TaskSetManager来管理当前要运行的Stage中的所有任务TaskSet,TaskSetManager会根据locality aware 来为Task分配计算资源,监控Task的执行状态(例如重试,慢任务进行推测式执行等):参考补充1
+	1.当我们启动Spark-shell本身的时候命令终端反馈回来的主要是ClientEndpoint和SparkDeploySchedulerBackend,
+		这是因为此时还没有任何Job的触发,这是启动Application本身而已,
+		所以主要就是实例化SparkContext并注册当前的应用程序给Master且从集群中获得ExecutorBackend计算资源;
+	2.DAGScheduler划分好Stage后会通过TaskSchedulerImpl中TaskSetManager来管理当前要运行的Stage中的所有任务TaskSet,
+	TaskSetManager会根据locality aware 来为Task分配计算资源,监控Task的执行状态(例如重试,慢任务进行推测式执行等):参考补充1
 	  
 	  
 二:TaskScheduler与SchedulerBackend
 	1.总体的底层任务调度过程如下:
 		a)TaskSchedulerImpl.submitTasks:主要的作用是讲TaskSet加入到TaskManager中进行管理;
-		b)SchedulableBuilder.addTaskSetManager: SchedulableBuilder会确定TaskSetManager的调度顺序,然后按照TaskSetManager的locality aware来确定每个Task具体运行在哪个ExecutorBackend中;
+		b)SchedulableBuilder.addTaskSetManager:
+			SchedulableBuilder会确定TaskSetManager的调度顺序,
+			然后按照TaskSetManager的locality aware来确定每个Task具体运行在哪个ExecutorBackend中;
+
 	schedulableBuilder.addTaskSetManager(manager, manager.taskSet.properties),参考补充2
-		c)CoarseGrainedSchedulerBackend.reviveOffers:给DriverEndpoint发送ReviveOffers,ReviveOffers本身是一个空的case object对象,只是起到触发底层资源调度的作用,在有Task提交或者计算资源变动的时候会发送ReviveOffers这个消息作为触发器;
+		c)CoarseGrainedSchedulerBackend.reviveOffers:
+			给DriverEndpoint发送ReviveOffers,ReviveOffers本身是一个空的case object对象,
+			只是起到触发底层资源调度的作用,在有Task提交或者计算资源变动的时候会发送ReviveOffers这个消息作为触发器;
+
 	backend.reviveOffers()
 	-->CoarseGrainedSchedulerBackend.reviveOffers():	
 	    driverEndpoint.send(ReviveOffers)

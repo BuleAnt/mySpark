@@ -3,8 +3,8 @@ package rdd
 import org.apache.spark.{SparkConf, SparkContext}
 
 /**
-	* Created by hadoop on 16-8-24.
-	*/
+  * BroadcastDemo
+  */
 object BroadcastDemo {
 	def main(args: Array[String]) {
 		val sc = new SparkContext(new SparkConf().setAppName("testBroadcast"))

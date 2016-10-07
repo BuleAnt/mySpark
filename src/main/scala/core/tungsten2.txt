@@ -1,0 +1,78 @@
+ “钨丝计划”的shuffle的使用
+
+一：使用Tungsten功能
+1， 如果想让您的程序使用Tungsten的功能，可以配置：
+Spark.Shuffle.Manager = tungsten-sort
+2， DataFrame中自动开启了Tungsten功能。
+
+二：Tungsten-sort base Shuffle writer内幕
+1，写数据在内存足够大的情况下是写到Page里面，在Page里面有一条条的Record，如果内存不够的话，会spill到磁盘上，输入数据的时候是循环每个Task中处理的数据Partition的结果，循环的时候会查看是否有内存，一个Page写满之后，才会写下一个Page。
+
+2，如何看内存是否足够呢？
+a)系统默认情况下给 shuffleMapTask 最大准备了多少内存空间，默认情况下是ExecutorHeapMemory*0.8*0.2 (spark.shuffle.memoryFraction = 0.2 , spark.shuffle.safeFraction = 0.8)
+
+b)另外一方面是和Task处理的Partition大小紧密相关
+写入的过程图：
+这里写图片描述
+
+1，mergeSpills的功能是将很多小文件合并成一个大文件。然后加上index文件索引。
+2,和Sort Based Shuffle 过程基本一样。
+3, 写数据在内存足够大的情况下是写到Page里面，在Page中有一条条的Record，如果内存不够的话会Spill到磁盘中。此过程跟前面讲解Sort base Shuffle writer过程是一样的。
+4,基于UnsafeShuffleWriter会有一个类负责将数据写入到Page中。
+5, insertRecordIntoSorter: 此方法把records的数据一条一条的写入到输出流。
+而输出流是: ByteArrayOutputStream
+
+四：Tungsten-sort base Shuffle Read原理
+基本上是复用了Hash Shuffle Read， 在Tungsten下获取数据的类叫做BlockStoreShuffleReader,其底层其实是Pag
+
+
+1，到底什么是page
+2，page具体的两种 实现方式
+3，page使用源码详解
+
+一：Tungsten中到底什么是Page？
+1， 在Spark其实不存在Page这个类的。Page是一种数据结构(类似于Stack，List等)，从OS层面上讲，Page代表了一个内存块，在Page里面可以存放数据，在OS中会存放很多不同的Page，当要获得数据的时候首先要定位具体是哪个Page中的数据，找到该Page之后从Page中根据特定的规则(例如说数据的offset和length)取出数据。
+
+2，到底什么是Spark中的Page呢？
+在阅读源码的时候，细致研究MemoryBlock.Java，MemoryBlock代表了一个Page的对象。
+3， 其中：Nullable：可以为空。为什么？Page代表了具体的内存区域以及内存里面具体的数据，Page中的数据可能是On-heap的数据，也可能是Off-heap中的数据。如果是On-heap则有对象，但是Off-heap的话就没有对象。所以用@Nullable，将对象设置为空。
+其中offset：偏移量。MemoryBlock封装了Off-heap和On-heap。
+
+这里写图片描述
+
+这里写图片描述
+
+3，On-heap和Off-heap寻址方式：
+On-heap：先找到对象，然后再找索引。
+Off-heap：根据地址找到索引。
+
+4， Page可以定位到数据，然后又知道数据的偏移量OffSet之后怎么访问数据？这时候需要length，但是length并不知道，所以此时的长度设定为固定的，设置固定长度的length。
+
+二：如何使用Page？
+1， 在TaskMemoryManager中，通过封装Page来定位数据，定位的时候如果是On-heap的话，则先找到对象，然后对象中通过offset来具体定位地址，而如果是Off-heap的话，则直接定位。
+
+这里写图片描述
+
+逻辑地址：Pagenumber由13个bit组成，51bit组成Offset
+2,如果是On-heap的方式：内存的分配是是由heapMemoryAllocator完成的。
+
+这里写图片描述
+
+long[] array = new long[(int)((size+7)/8)];
+内存对齐，array里面都是地址，因为GC的时候对象的地址会发生变化，因此就需要
+为了获得对象的引用。也就是对象的地址。
+return new MemoryBlock(array, Platform.LONG_ARRAY_OFFSET, size);
+//array里面保存的都是地址，而LONG_ARRAY_OFFSET是偏移量，因此二者就可以定位到绝对地址，然后根据size就可以确定数据。
+
+}
+3,如果是Off-heap的方式：内存的分配是是由UnsafeMemoryAllocator完成的。
+这里写图片描述
+// 对象的引用是null
+//address是绝对地址
+
+4， 一个关键的问题是如何确定数据呢？这个时候就需要涉及具体的算法。
+针对Task是怎么管理内存的？
+TaskMemoryManager基于Page的概念屏蔽掉了底层是On-heap或者是Off-heap的概念，使用逻辑地址做指针，通过逻辑地址来具体定位到我们的记录具体在Page中的位置，
+逻辑地址的表示：long类型的64bit的一个数字来表示的。
+
+http://blog.csdn.net/erfucun/article/details/52003557

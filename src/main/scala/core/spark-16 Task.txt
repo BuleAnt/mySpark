@@ -105,3 +105,98 @@ Executor会通过TaskRunner在ThreadPool来运行具体的Task,TaskRUnner内部�
 
 其他参考:Task向Executor提交的源码解析
 	http://blog.csdn.net/anzhsoft/article/details/40238111
+
+---------------------------------------------------------------------------------------------------
+
+一：Spark集群部署
+二：Job提交解密
+三：Job生成和接受
+四：Task的运行
+五：再论shuffle
+
+１,从spark Runtime的角度讲来讲有５大核心对象:
+Master,Worker,Executor,Driver,CoarseGraindExecutorbacked
+２,Spark在做分布式集群系统的设计的时候，最大化功能的独立，
+	模块化封装具体的独立的对象，强内聚低耦合
+	（耦合性也称块间联系，指软件系统结构中各模块间相互联系紧密程度的一种度量。
+		模块之间联系越紧密，其耦合性就越强，模块的独立性则越差。
+		模块间耦合高低取决于模块间接口的复杂性、调用的方式及传递的信息。
+	内聚性又称块内联系。指模块的功能强度的度量，即一个模块内部各个元素彼此结合的紧密程度的度量。
+		若一个模块内各元素（语名之间、程序段之间）联系的越紧密，则它的内聚性就越高）
+３,当Driver中的SparkContext初始化的时候会提交程序给Master，
+	Master如果接受该程序在spark中运行的话，就会为当前程序分配AppID，同时分配计算资源，
+
+	需要特备注意的是：
+	Master是根据当前程序的配置信息来给集群中的Worker发指令来分配具体的计算资源。
+	但是，Master发指令后并不关心具体的计算资源是否已经分配，
+	转过来说，Master发出指令后就记录了分配的资源，以后客户端再次提交其他程序的话就不能使用该资源，
+
+	其弊端是可能会导致其他要提交的程序无法分配到本来应该可以分配到的计算资源。
+	最终优势在spark分布式系统功能弱耦合的基础上最快的运行系统
+		（否则如果Master要等到计算资源最终分配成功后才通知Driver的话，会造成Driver的阻塞，不能够最大化的并行计算资源的利用率）
+		（低耦合：不关心指令发送成功还是失败）
+		（快是对Driver而言）
+
+二　:Job提交过程源码解密
+
+１，一个非常重要的技巧通过在Spark-Shell中运行一个Job来了解Job提交的过程，然后再次用源码验证。
+	这个过程：　
+	sc.textFIle("src/main/resources/text.txt").flatMap(_.split(" ")).map(word=>(word,1)).reduceByKey(_+_).saveAsTextFile("target/out/wc.out")
+２，在Spark中所有的Action都会触发一个至少一个Job，在上述代码中通过saveAsTextFile来触发Job的
+３.SparkContext在实例化的时候会构造SparkDeploySchedulerBackend(deploy:配置，部署），DAGScheduler,TaskShedulerImpl(Impl:接口），MapOutputTrackerMaster等对象：
+	（1）SparkDeploySchedulerBackend负责集群计算资源的管理和调度。
+	（2）DAGScheduler ： 负责高层调度（例如： Job中stage的划分，数据本地性等内容）
+	（3）TaskSchedulerImpl : 负责具体stage内部的底层调度（例如： 每个Task的调度 ，Task容错等等）
+	（4）MapOutputTrackerMaster： 负责shuffle中数据的输出和读取的管理。
+补充说明的是：
+	Spark默认程序是排队的，Spark默认的情况下由于集群中一般都只有一个Application在运行，所有Master分配计算资源策略就没有那么明显啦）
+
+4，TaskSchedulerImpl内部的调度：
+
+三：Task的运行解密：
+１，Task运行在Executor中，而Executor又是位于CoarseGrainedExecutorBackend中的且CoarseGrainedExecutorBackend和Executor是一一对应的：
+
+２，单CoarseGrainedExecutorBackend接受到TaskSetManager发过来的LaunchTask的消息后会反序列化TaskDescription，然后使用CoarseGrainedExecutorBackend中唯一的Executor来执行任务
+
+	case LaunchTask(data) =>
+	if (executor == null) {
+	logError(“Received LaunchTask command but executor was null”)
+	System.exit(1)
+	} else {
+	val taskDesc = ser.deserializeTaskDescription
+	logInfo(“Got assigned task ” + taskDesc.taskId)
+	executor.launchTask(this, taskId = taskDesc.taskId, attemptNumber = taskDesc.attemptNumber,
+	taskDesc.name, taskDesc.serializedTask)
+	}
+发消息要么是case Class或者case object（是唯一的）每次生成类的事例
+
+一： TaskSheduler原理解密：
+
+1，DAGScheduler 在提交 TaskSet 给底层调度器TaskSheduler的时候是面向接口TaskSheduler的，这符合面向对象中依赖抽象而不是依赖具体的原则，带来了底层资源调度器的可抽拨性，导致Spark可以运行众多的资源调度器模式上，例如：standalone,Yarn,Mesos,Local.Ec2,其他自定义的资源调度器；在standalone的模式下我们聚焦于TaskShedulerImpl;
+
+2,在SparkContext实例化的时候通过createTaskScheduler来创建TaskSchedulerImpl和SparkDeployShedulerBackend
+
+case SPARK_REGEX(sparkUrl) =>
+val scheduler = new TaskSchedulerImpl(sc)
+val masterUrls = sparkUrl.split(“,”).map(“spark://” + _)
+val backend = new SparkDeploySchedulerBackend(scheduler, sc, masterUrls)
+scheduler.initialize(backend)
+(backend, scheduler)
+
+在TaskShedulerImpl的initialize（初始化）方法中把SparkDeploySchedulerBackend传进来从而赋值为TaskShedulerImpl的backend;在TaskShedulerImpl调用start方法的时候会调用backend.start方法，在start方法中最终注册应用程序
+
+3，TaskSheduler的核心任务是任务提交TaskSet到集群运算并汇报结构
+a)为TaskSet创建和维护一个TaskSetManager并追踪任务本地性以及
+错误信息
+b)遇到Straggle（迷路）任务会放到其它节点上重试
+c)向DAGScheduler汇报执行情况，包括在shuffle输出lost的时候报告fetch faild 错误等信息。
+
+4，TaskSheduler内部握有SchedulerBackend，从standalone模式来讲具体实现是SparkDeploySchedulerBackend;
+
+5,SparkDeploySchedulerBackend 在启动的时候构造了AppClient实例并在该实例实例化的时候启动了ClientEndpoint(endpoint 终点)这个消息循环体，ClientEndpoint在启动的时候会向Master注册当前程序；而SparkDeploySchedulerBackend的父类CoarserGrainedShedulerBackend在start的时候会实例化类型为DriverEndpoint（这就是我们程序运行的时候经典对象Driver）的消息循环体，SparkDeployShedulerBackend专门负责收集worker上的资源信息，当ExecutorBackend启动的时候会发送RegisteredExecutor信息向DriverEndpoint注册，此时SparkDeploySchedulerBackend就掌握了当前应用程序拥有的计算资源，TaskScheduler就是通过SparkDeploySchedulerBackend拥有计算资源来运行具体的Task；
+
+6，SparkContext，DAGScheduler,TaskSchedulerImpl,SparkDemploySchedulerBackend在应用程序启动的时候只实例化一次，应用程序存在期间始终存在这些对象。
+
+Final Generalize： 在SparkContext实例化的时候调用createTaskSheduler来创建TaskSchedulerImpl和SparkDeploySchedulerBackend，同时在SparkContext实例化的时候会调用SparkDeploySchedulerBackend的start，在start方法中调用SparkDeploySchedulerBackend的start，在该start方法中创建APPClient对象，并调用APPClient的start方法，在该start的方法中会创建ClientEndpoint，在创建ClientEndpoint会传入Command来指定具体为当前应用程序启动的Executor进程的入口类的名称为CoarseGrainedExecutorBackend,然后ClientEndpoint启动并通过tryRegisterMaster来注册当前的应用程序到Master中，Master接收到注册信息后如何可以运行程序，则会为改程序生产JobID并通过Scheduler来分配计算资源，具体计算资源的分配是通过应用程序的运行方式，Memory,cores等配置信息来决定的，最后Master发送指令给Worker，Worker中为当前应用程序分配计算资源时会首先分配ExecutorRunner，ExecutorRunner内部通过Thread的方式构建ProcessBuilder来启动另外一个JVM，这个JVM进程启动的时候加载的main方法所在的类的名称为CoarseGrainedExecutorBackend的类，此时JVM通过ProcessBuilder启动的时候获得了CoarseGrainedExecutorBackend,本身这个消息循环体CoarseGrainedExecutorBackend在实例化的时候回调Onstart向DriverEndpoint发送RegisterExecutor来注册当前CoarseGrainedExecutorBackend，此时DriverEndpoint收到该注册信息并保存在了SparkDeploySchedulerBackend实例的内存数据结构中，这样Driver就获得了计算资源。
+
+这里写图片描述

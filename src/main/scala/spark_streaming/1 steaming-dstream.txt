@@ -1,0 +1,183 @@
+Spark Streaming 工作原理
+
+一:Streaming-->Spark Streaming
+流（Streaming），在大数据时代为数据流处理，就像水流一样，是数据流；
+	既然是数据流处理，就会想到数据的流入、数据的加工、数据的流出。日常工作、生活中数据来源很多不同的地方。
+		例如：工业时代的汽车制造、监控设备、工业设备会产生很多源数据；
+		信息时代的电商网站、日志服务器、社交网络、金融交易系统、黑客攻击、垃圾邮件、交通监控等；
+		通信时代的手机、平板、智能设备、物联网等会产生很多实时数据，数据流无处不在。
+	在大数据时代Spark Streaming能做什么？
+		平时用户都有网上购物的经历，用户在网站上进行的各种操作通过Spark Streaming流处理技术可以被监控，用户的购买爱好、关注度、交易等可以进行行为分析。
+		在金融领域，通过Spark Streaming流处理技术可以对交易量很大的账号进行监控，防止罪犯洗钱、财产转移、防欺诈等。
+		在网络安全性方面，黑客攻击时有发生，通过Spark Streaming流处理技术可以将某类可疑IP进行监控并结合机器学习训练模型匹配出当前请求是否属于黑客攻击。
+		其他方面，如：垃圾邮件监控过滤、交通监控、网络监控、工业设备监控的背后都是Spark Streaming发挥强大流处理的地方。
+	大数据时代，数据价值一般怎么定义？
+		所有没经过流处理的数据都是无效数据或没有价值的数据；
+		数据产生之后立即处理产生的价值是最大的，数据放置越久或越滞后其使用价值越低。
+		以前绝大多数电商网站盈利走的是网络流量（即用户的访问量），
+		如今，电商网站不仅仅需要关注流量、交易量，更重要的是要通过数据流技术让电商网站的各种数据流动起来，
+		通过实时流动的数据及时分析、挖掘出各种有价值的数据；
+			比如：对不同交易量的用户指定用户画像，从而提供不同服务质量；
+			准对用户访问电商网站板块爱好及时推荐相关的信息。
+
+	SparkStreaming VS Hadoop MR：
+		Spark Streaming是一个准实时流处理框架，
+		而Hadoop MR是一个离线、批处理框架；
+		很显然，在数据的价值性角度，Spark Streaming完胜于Hadoop MR。
+
+	SparkStreaming VS Storm：
+		Spark Streaming是一个准实时流处理框架，处理响应时间一般以分钟为单位，也就是说处理实时数据的延迟时间是秒级别的；
+		Storm是一个实时流处理框架，处理响应是毫秒级的。所以在流框架选型方面要看具体业务场景。
+		需要澄清的是现在很多人认为Spark Streaming流处理运行不稳定、数据丢失、事务性支持不好等等，那是因为很多人不会驾驭Spark Streaming及Spark本身。
+
+	SparkStreaming优点：
+		1、提供了丰富的API，企业中能快速实现各种复杂的业务逻辑。
+		2、流入Spark Streaming的数据流可以和机器学习算法结合，完成机器模拟和图计算。
+		3、Spark Streaming基于Spark优秀的血统。
+	SparkStreaming能不能像Storm一样，一条一条处理数据？
+		Storm处理数据的方式是以条为单位来一条一条处理的，
+		而Spark Streaming基于单位时间处理数据的:见下述wc实例演示
+		SparkStreaming能不能像Storm一样呢？
+		答案是：可以的。
+
+	通过Spark Streaming动手实战wordCount实例
+		官网doc案例:
+		http://spark.apache.org/docs/1.6.1/streaming-programming-guide.html
+		这里是运行一个Spark Streaming的程序：统计这个时间段内流进来的单词出现的次数.
+		它计算的是：他规定的时间段内每个单词出现了多少次。
+		先启动下Spark集群：
+		nc -lk 9999
+		./bin/run-example streaming.NetworkWordCount localhost 9999
+		关于nc:
+			nc(netcat)，一般我们多用在局域网内传送文件(scp多用在跳板机存在的情况),可查询man nc查看它的说明，更多用法请google之。
+			netcat使用socket套接字,可以在shell命令中聊天,或者通过代码socket编程进行数据传输
+			(nc -l 9999启动监听,nc localhost 9999指定socket就可以建立链接)
+		    1.基本参数
+		    想要连接到某处: nc [-options] hostname port[s] [ports] ......
+		    绑定端口等待连接: nc -l -p port [-options] [hostname] [port]
+		    参数:
+		    -g gateway source-routing hop point[s], up to 8
+		    -G num source-routing pointer: 4, 8, 12, ......
+		    -h 帮助信息
+		    -i seconds延时的间隔
+		    -l 监听模式，用于入站连接
+		    -n 指定数字的IP地址，不能用hostname
+		    -o file 记录16进制的传输
+		    -p port本地端口号
+		    -r 任意指定本地及远程端口
+		    -s addr本地源地址
+		    -u UDP模式
+		    -v 详细输出——用两个
+		    -v可得到更详细的内容
+		    -w seconds timeout的时间
+		    -z 将输入输出关掉——用于扫描时，其中端口号可以指定一个或者用lo-hi式的指定范围。
+
+		Spark Streaming也是可以一条一条记录去处理数据，需要一个机制：如何定义一条一条的记录。
+		一般和Kafka配合。数据来自不同的终端，推给Kafka，(kafka加下述)
+
+	Spark+Kafka
+		业界一般的做法是Spark Streaming和Kafka搭档即可达到这种效果,如下流程架构:
+
+			终端App,日志服务器,电商/媒体/SNS,工业设备和交通监控等,金融预测和安全控制
+			-->产生日志,信息等各种数据
+			-->Kafka集群传输消息(简述见下文)
+			-->Spark Streaming框架处理
+			-->Spark Core计算
+
+		Kafka是最好的消息中间件，是一个集群，可以处理任意规模的数据。Spark Streaming会从数据从Kafka拿过来，
+		Kafka就是生产者和消费者的模式，Kafka既有广播模式，又符合队列模式。Zero-Copy导致Kafka的效率非常高。
+		Kafka业界认同最主流的分布式消息框架，此框架即符合消息广播模式又符合消息队列模式。
+		需要Kafka的原因：
+			1.做缓冲Cache
+			2.不论数据来源，统一的接口interface
+			3.数据的持久化persistence;（默认最大持久化一周）
+			4.Zero-Copy技术让Kafka每秒吞吐量几百兆，而且数据只需要加载一次到内核提供其他应用程序使用
+
+		外部各种源数据推进（Push）Kafka，然后再通过计算框架Spark Streaming抓取（Pull）数据，
+		抓取的数据量可以根据自己的实际情况确定每一秒中要处理多少数据。
+		Job的执行是Spark Streaming框架帮我们产生的,和开发者自己写的Spark代码业务逻辑没有关系，
+		所以在开发者编写好的Spark代码时（如：flatmap、map、collect），不会导致job的运行，
+		到底什么时候运行呢？
+		Spark Streaming基于单位时间处理数据的,也就是说Spark Streaming框架的一定时间间隔自动产生并执行一个Job
+		这个间隔时间可以手动配置,如：每隔一秒钟就会产生一次Job的调用。
+
+二: DStream
+	DSteam和RDD关系
+		Spark Streaming流进来的数据是DStream,不是基于RDD编程的,但Spark Core框架只认RDD，这是如何结合的呢？
+		这里给出三次思维转换来理解:
+		由于Spark Streaming设计的是基于单位时间处理数据,Job是由Spark Streaming框架定时产生的，
+		第1层.首先对于框架角度,随着时间的运动推移,框架是根据不变的代码模板对变化的数据不断产生不同的Job
+			这也就是说:Steaming框架以我们编写的固定代码为模板,生成变化Job!!!
+		第2层.再从job上看,这些相对框架不断变化数据与Job是一一对应的,
+			即其中每个Job中的数据与该Job处理的数据是随时间推移不变的,
+			所以说Job是在Spark Core角度上,是进行RDD的业务逻辑计算处理!!!
+		第3层.在回到代码模板角度,随时间变化的数据是在Streaming框架中通过相对代码不变的DStream定义的,
+			而这些变化的数据是每个Job中相对不变的RDD,
+			所以,也就是说DStream是RDD的模板!!!DStream产生Job中相应的RDD
+			RDD之间在Job中会有依赖关系，Dstream在代码逻辑是也会有相应的依赖关系，
+			同样的,他们逻辑上会构成一个Dstream的DAG图，而这个的DAG图也是每个Job的DAG图
+	总得来说:
+		Spark Streaming的DStream是根据流式数据的处理,在RDD的基础上做一层封装而已。
+		Spark Streaming框架中，作业实例的产生都是基于rdd实例来产生，
+		我们写的代码是作业的模板，即rdd是作业的模板，模板一运行rdd就会被执行，此时action必须处理数据。
+		RDD的模板就是DStream离散流，RDD之间存在依赖关系，DStream就有了依赖关系，也就构成了DStream 有向无环图。这个DAG图，是模板。
+
+	DSteam的Java方式开发
+		Spark streaming 基于Spark Core进行计算，需要注意事项：
+	第一步：配置SparkConf：
+		1，设置本地master是local的化,至少有2条线程：
+			因为Spark Streaming应用程序在运行的时候，至少有一条线程用于不断的循环接收数据，
+			并且至少有一条线程用于处理接收的数据（否则的话，无法有线程用于处理数据，随着时间的推移，内存和磁盘都会不堪重负。）
+		2，对于集群而言，每个Executor一般肯定不只一个Thread,对于处理Spark Streaming的应用程序而言，
+		根据经验，每个Executor一般分配(奇数)5个core左右的core是最佳的
+	第二步:创建SparkStreamingContext,
+		1.这个是SparkStreaming应用程序所有功能的七点和程序调度的核心
+		SparkSteamingContext的构建基于SparkConf参数,可以基于持久化的SparkStreamingContext的内容来恢复过来
+			(典型的场景是Driver朋克后重启,由于SPark Streaming具有联系7*24小时不间断运行的特征,
+			所以需要在Driver重启后继续上一次的状态,此时的状态恢复需要基于曾经的Checkpoint)
+		2.在一个Spark Streaming应用程序中可以创建多个SparkStreamingContext对象,
+		使用下一个SparkStreaming之前需要把前面正在运行的SparkStreamingContext对象关闭掉
+		由此,我们可以理解:
+		SparkStreaming框架只是Spark Core上的一个应用程序而已,
+		只不过SparkStreaming框架上运行的化需要Spark工程师写业务逻辑而已
+
+	第三步,创建Spark Streaming输入数据来源:
+		1，数据输入来源可以基于File、HDFS、Flume、Kafka、Socket等
+			我们将数据来源配置为本地端口9999（注意端口要求没有被占用）:
+		2，在这里我们指定数据来源与网络Socket端口，Spark Streaming连接上该端口并在运行的时候一直监听该端口的数据，
+			当然，该端口服务首先必须存在并且在后续会根据业务需要不断的有数据产生。
+		3，如果经常在每间隔5秒钟没有数据的话,不断的启动空的Job其实会造成调度资源的浪费，因为没有数据需要计算;
+			所以企业级生产环境的代码在具体提交Job前会判断是否有数据，如果没有，就不再提交Job。
+
+	第四步：通过对DStreams应用转变操作和输出操作来定义流计算
+		DStream是RDD产生的模板(类)，基于DStream进行编程就像对RDD编程一样，
+		在Spark Streaming发生计算前，其实质是把每个Batch的DStream的操作翻译成为了RDD操作。
+
+		如:WordCount:flatMap-->mapToPair-->reduceByKey-->print
+		此处的print并不会直接触发Job的执行，因为现在的一切都是在Spark Streaming框架控制下，具体要触发，
+		对于Spark Streaming而言，一般是基于设置的时间间隔Duration。
+
+	第五步:print()等定义输出操作
+		Spark Streaming应用程序要想执行具体的Job，对DSteam就必须有output Stream操作，
+		output Stream有很多类型的函数触发，例如
+			print，saveAsTextFile,saveAsHadoopFiles等，
+			最为重要的是foreachRDD，因为处理的结果一般都会放在Redis，DB，DashBoard等，
+			foreachRDD主要就是完成这些功能的，而且可以随意的自定义具体数据放在哪里。
+
+	第六步：Streaming框架
+		用streamingContext.start()来开始接收数据和处理流程。
+		通过streamingContext.awaitTermination()方法来等待处理结束（手动结束或因为错误）
+		还可以通过streamingContext.stop()来手动结束进程。
+
+	需要记住的关键点：
+		1.一旦context启动后，就不能再添加新的streaming计算或操作。
+		2.一旦context停止后，就不能再重新启动它了。
+		3.在同一时间内，一个JVM上只能运行一个StreamingContext
+		4.在StreamingContext上的stop()操作也会将SparkContext停止。
+		如果只想停止StreamingContext，对stop的可选参数stopSparkContext设置为false.
+		5.一个SparkContext可以用来创建多个StreamingContext,只要前一个StreamingContext已经停止了。
+
+Code See:java/main/spark_streaming/WordCountOnline.java
+
+
+

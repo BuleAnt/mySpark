@@ -1,0 +1,50 @@
+基于HDFS的SparkStreaming案例实战和内幕源码解密
+	SparkStreamingOnHDFS.java
+
+	代码打包在集群中运行：
+	首先将上述写好的代码打包到集群
+	接下来分别启动Hadoop与Spark与Spark-history服务，之后在web端监测是否启动成功
+	在运行时我遇到了streaming.SparkStreamingContext的错误提示，
+	这时候只需要将CheckPoint_Data文件夹删除重新在建立一遍就可主要原因为：
+		1.Streaming会定期的进行checkpoint。
+		2.重新启动程序的时候，他会从曾经checkpoint的目录中，
+		如果没有做额外配置的时候，所有的信息都会放在checkpoint的目录中(包括曾经应用程序信息)，
+		因此下次再次启动的时候就会报错，无法初始化ShuffleDStream。
+	在这里使用脚本的形式，启动程序，脚本See: streaming_hdfs.sh
+
+Spark Streaming on HDFS源码解密
+	1，JavaStreamingContextFactory的create方法可以创建JavaStreamingContext
+	2，而我们在具体实现的时候覆写了该方法，内部就是调用createContext方法来具体实现。
+		上述实战案例中我们实现了createContext方法（在代码最后部分）。
+	3.checkpoint:
+		一方面保持容错，一方面保持状态，在开始和结束的时候每个batch都会进行checkpoint
+	4.remember:
+		流式处理中过一段时间数据就会被清理掉，但是可以通过remember可以延长数据在程序中的生命周期，另外延长RDD更长的时间。
+		假设数据流进来，进行ML或者Graphx的时候有时需要很长时间，但是bacth定时定条件的清除RDD，所以就可以通过remember使得数据可以延长更长时间
+	5.在JavaStreamingContext中，getOrCreate方法源码如下：
+		如果设置了checkpoint ，重启程序的时候，getOrCreate()会重新从checkpoint目录中初始化出StreamingContext。
+
+	/**
+	* Either recreate a StreamingContext from checkpoint data or create a new StreamingContext.
+	* If checkpoint data exists in the provided `checkpointPath`, then StreamingContext will be
+	* recreated from the checkpoint data. If the data does not exist, then the provided factory
+	* will be used to create a JavaStreamingContext.
+	*
+	* @param checkpointPath Checkpoint directory used in an earlier StreamingContext program
+	* @param creatingFunc   Function to create a new JavaStreamingContext
+	* @param hadoopConf     Hadoop configuration if necessary for reading from any HDFS compatible
+	*                       file system
+	* @param createOnError  Whether to create a new JavaStreamingContext if there is an
+	*                       error in reading checkpoint data.
+	*/
+	def getOrCreate(
+		checkpointPath: String,
+		creatingFunc: JFunction0[JavaStreamingContext],
+		hadoopConf: Configuration,
+		createOnError: Boolean
+	): JavaStreamingContext = {
+		val ssc = StreamingContext.getOrCreate(checkpointPath, () => {
+			creatingFunc.call().ssc
+		}, hadoopConf, createOnError)
+		new JavaStreamingContext(ssc)
+	}

@@ -1,7 +1,41 @@
-Spark SQL和DataFrame的本质
-    Spark SQL和DataFrame（DataSet，还没有深度去使用）
-    DataFrame与RDD
-    企业级最佳实践
+SparkSQL简介
+	SparkSQL的前身是Shark，给熟悉RDBMS但又不理解MapReduce的技术人员提供快速上手的工具，
+	Hive应运而生，它是当时唯一运行在Hadoop上的SQL-on-Hadoop工具。
+	但是MapReduce计算过程中大量的中间磁盘落地过程消耗了大量的I/O，降低的运行效率，
+	为了提高SQL-on-Hadoop的效率，大量的SQL-on-Hadoop工具开始产生，其中表现较为突出的是：MapR的Drill；Cloudera的Impala；Shark
+	其中Shark是伯克利实验室Spark生态环境的组件之一，
+	它修改了下图所示的右下角的内存管理、物理计划、执行三个模块，并使之能运行在Spark引擎上，从而使得SQL查询的速度得到10-100倍的提升。
+
+	但是，随着Spark的发展，对于野心勃勃的Spark团队来说，
+	Shark对于Hive的太多依赖（如采用Hive的语法解析器、查询优化器等等），制约了Spark的One Stack Rule Them All的既定方针，制约了Spark各个组件的相互集成，
+	所以提出了SparkSQL项目。
+	SparkSQL抛弃原有Shark的代码，汲取了Shark的一些优点，
+	*如内存列存储（In-Memory Columnar Storage）、Hive兼容性等，
+	重新开发了SparkSQL代码；由于摆脱了对Hive的依赖性，SparkSQL无论在数据兼容、性能优化、组件扩展方面都得到了极大的方便。*
+	SparkSQL的优势
+		1.数据兼容
+			SparkSQL可以处理一切存储介质和各种格式的数据，
+			目前来看不但兼容Hive，还可以从RDD、parquet文件、JSON文件中获取数据，
+			未来版本甚至支持获取RDBMS数据以及cassandra等NOSQL数据；
+			同时SparkSQL可以通过扩展功能来支持更多的数据类型，例如Kudo等。
+		(2) 计算能力
+		由于SparkSQL基于Spark的高效计算引擎，导致其对于数据仓库的计算能力具有级大规模的提升(尤其在2.0版本钨丝计划成熟以后)，提升包括两方面：
+			1) 计算速度
+				Spark的强大计算能力为保证，提升计算速度。
+			2) 计算复杂度
+				由于SparkSQL可以直接操作DataFrame，
+				从而使数据仓库的数据可以直接使用复杂算法库中的算法(例如机器学习，图计算等)，
+				从而可以进行复杂升读的数据价值的挖掘。
+	SparkSQL的未来
+		1,SparkSQL将是数据仓库引擎，将是数据挖掘的引擎，将是数据科学计算和分析的引擎
+		2,DataFrame会让Spark(SQL)成为大数据计算引擎的霸主地位
+		3,传统数据库对于实时事务性分析具有优势：例如银行转账。
+		4,未来大数据解决方案雏形：Hive提供廉价的数据仓库存储，SparkSQL负责高速的计算，DataFrame负责复杂的数据挖掘
+DataFrame简介
+	(1) 理解
+	Spark的DataFrame可以简单的理解为一个分布式的二维表，这样也就意味着他的每一列都带有名称和类型，
+	也就意味着SparkSQL在基于每一列数据的元数据进行更加细粒度的分析，而不是如同以往分析RDD的时候那种粗粒度的分析。
+	也就意味着这样SparkSQL基于DataFrame可以进行更加高效的性能优化。
 
 一：Spark SQL和DataFrame
 

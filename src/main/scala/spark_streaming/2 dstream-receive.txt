@@ -1,0 +1,75 @@
+将StreamingContext、DStream、Receiver结合起来分析其流程
+
+一.StreamingContext源码描述
+	案例:
+	JavaStreamingContext jssc = new JavaStreamingContext("local[2]",
+    "JavaNetworkWordCount", new Duration(1000));
+    Jssc.checkpoint(".");//使用updateStateByKey（）函数需要设置checkpoint
+    //打开本地的端口9999
+    JavaReceiverInputDStream<String> lines = jssc.socketTextStream("localhost",9999);
+	例如:ssc.socketTextStream( hostname,port,storageLevel)
+		通过StreamingContext对象jssc，创建应用程序主入口，并连上Driver上的接收数据服务端口9999写入源数据
+	StreamingContext的主要功能有：
+	1.主程序的入口
+	2.提供了各种创建DStream的方法接收各种流入的数据源（例如：Kafka、Flume、Twitter、ZeroMQ和简单的TCP套接字等）；
+	3.通过构造函数实例化StreamingContext对象时，可以指定master URL、appName、或者传入SparkConf配置对象、或者已经创建的SparkContext对象；
+	4.将接收的数据流传入DStreams对象中；
+	5.通过Spark Streaming对象实例的start方法启动当前应用程序的流计算框架或通过stop方法结束当前应用程序的流计算框架；
+	其他参考:
+		http://blog.csdn.net/huwenfeng_2011/article/details/43371325
+
+二、DStream功能及源码剖析：
+	1、DStream是RDD的模板，DStream是时空角度对数据抽象的，RDD是架构设计角度对数据抽象
+	2、DStream的具体实现子类如下图所示：See源码Ctrl+T
+	3、以StreamingContext实例的socketTextSteam方法为例，
+	其执行完的结果返回DStream对象实例，其源码调用过程如下图：
+	 ssc.socketTextStream-->socketStream()
+	 -->new SocketInputDStream[T](this, hostname, port, converter, storageLevel)
+	 该类是ReceiverInputDStream子类,其必须在工作节点上启动一个接收端线程接收外部数据
+	    即在onStart方法中会new Thread("Socket Receiver").run(receive())
+	 在receive方法中会先使用socket.getInputStream获取数据
+	 然后while循环来存储储蓄数据(内存、磁盘),store(iterator.next)
+
+三、Receiver功能及源码剖析：
+	1、Receiver代表数据的输入，接收外部输入的数据，如从Kafka上抓取数据；
+	2、Receiver运行在Worker节点上；
+	3、Receiver在Worker节点上抓取Kafka分布式消息框架上的数据时，具体实现类是KafkaReceiver；
+	4、Receiver是抽象类，其抓取数据的实现子类如下图所示：
+	5、如果上述实现类都满足不了您的要求，您自己可以定义Receiver类，只需要继承Receiver抽象类来实现自己子类的业务需求。
+
+四、StreamingContext、DStream、Receiver结合流程分析：
+	Spark数据流程的Logical Model
+
+		InputDStream-->TransformationsDStream-->OutputStream:ForeachDStream
+
+		（1）inputStream代表了数据输入流(如：Socket、Kafka、Flume等)
+		（2）Transformation代表了对数据的一系列操作，如flatMap、map等
+		（3）outputStream代表了数据的输出，例如wordCount中的println方法：
+	逻辑模型与Spark Core:
+		Spark只认RDD;所以该Logical Model需要生成RDD的DAG才能够真正的执行
+			DStream就是RDD的模板
+			DStreamGraph就是DAG的模板
+		当到达Interval的时候这些模板就会被BatchData实例化成为RDD和DAG!!!
+		Spark Streaming中触发业务Job的唯一方式是Batch Interval,
+			Driver中定时器Timer根据开发者传进来的时间间隔生成和触发Job的执行
+
+	InputDStream端从Socket角度看:
+		首先启动外部的DataSocket Server-->其向Socket(host,Port)中写数据
+		-->InputDStream内部SocketReceive监听该Socket即:
+		内部new Socket(host,port),并socket.getInputStream()
+		不断的从远程pull数据到Receive中,转过来通过BlockManager进行存储
+		在这里就可以看到SparkStreaming框架的一个主要任务:
+		就是解决如何将不断流进来的Stream数据处理为Job中的RDD
+	数据数据在流进来之后最终会生成Job，最终还是基于Spark Core的RDD进行执行：
+
+	在处理流进来的数据后,是对DStream进行Transformation;
+		由于是StreamingContext所以根本不会去运行，
+		StreamingContext会根据Transformation生成”DStream的链条”及DStreamGraph，
+		而DStreamGraph就是DAG的模板，这个模板是被框架托管的。
+	当我们指定时间间隔的时候，Driver端就会根据这个时间间隔来触发Job;
+	而触发Job的方法就是根据OutputDStream中指定的具体的function,
+		例如wordcount中print，这个函数一定会传给ForEachDStream，
+		它会把函数交给最后一个DStream产生的RDD，
+		也就是RDD的print操作，而这个操作就是RDD触发Action。
+		转过来就在集群上执行
+

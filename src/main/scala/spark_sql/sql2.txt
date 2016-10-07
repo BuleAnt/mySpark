@@ -101,28 +101,32 @@ Spark SQL再进行数据操作的时候涉及到数据输入输出,其主要操�
 	我们可以通过load创建DF,或者通过save保存DF到具体文件,
 	可以以具体格式指明读取或输出的文件格式
 SparkSql源码:
-  def load(path: String): DataFrame = {
-    read.load(path)
-  }
+	def load(path: String): DataFrame = {
+		read.load(path)
+	}
 	其中DataFrameReader是load系统文件成为DataFrame的接口
-	其format(source: String)用于初始化指定文件格式
-	schema(schema: StructType)等
-	load最终在ResolvedDataSource.apply()中通过反射和模式匹配relation = userSpecifiedSchema
-	然后new一个 ResolvedDataSource(clazz, relation),在其中
-		backwardCompatibilityMap提供了jdbc,json,parquet等数据格式的反向移动数据的兼容性
-		lookupDataSource方法支持hive的orc,avro等格式
-	最后调用DataFrame.apply()最终调用class主构造器其中有:
-	toDF(),printSchema(),explain()描述转换方法以及join(),sortWithinPartitions()等sql操作
+	用来从外部存储系统（比如：文件系统，键值存储库，等等）读取数据，并返回DataFrame对象。
+	1.其format(source: String)用来设置输入数据源的格式,初始化指定文件格式schema(schema: StructType)等
+	2.load最终在ResolvedDataSource.apply()
+		其中通过对类型的数据源反射和模式匹配relation = userSpecifiedSchema
+		然后new一个 ResolvedDataSource(clazz, relation),在其中
+		3.backwardCompatibilityMap提供了jdbc,json,parquet等数据格式的反向移动数据的兼容性
+			可以知道，Spark SQL可以用来处理jdbc访问的数据库、json文件、parquet等多种来源的数据。
+		4.lookupDataSource方法支持hive的orc,avro等格式
+			可以知道，Spark SQL可以处理Avro、Hive的ORC、访问Hadoop的文件系统等各种文件。
+	理论上讲，Spark SQL可以支持所有格式数据源。
+	5.最后调用DataFrame.apply()最终调用class主构造器其中有:
+		toDF(),printSchema(),explain()描述转换方法以及join(),sortWithinPartitions()等sql操作
 
-	DataFrame.write()返回DataFrameWriter,该类可以通过mode指定写入模式
+	6.DataFrame.write()返回DataFrameWriter,该类可以通过mode指定写入模式
 		SaveMode默认ErrorIfExists,其他Append/Overwrite/Ignore
 		format指定写入格式,其他方法如save,saveAsTable,json,parquet,orc
-	save()方法通过ResolvedDataSource.apply(),其中
+	7.save()方法通过ResolvedDataSource.apply(),其中
 		参数source初始化为df.sqlContext.conf.defaultDataSourceName,其默认为parquet
 	关于parquet:
-	parquet+Spark SQL是经典组合，在生产环境里。采用parquet和不采用的差别有天壤之别。
-	进行数据多维度分析的时候，数据分析层面，基本都是以parquet的方式存储。
-	kudu是历史性突破，想替代HDFS。yarn本身有太多问题。Mesos较为优秀
+		parquet+Spark SQL是经典组合，在生产环境里。采用parquet和不采用的差别有天壤之别。
+		进行数据多维度分析的时候，数据分析层面，基本都是以parquet的方式存储。
+		kudu是历史性突破，想替代HDFS。yarn本身有太多问题。Mesos较为优秀
 
 	Demo See: SparkSQLLoadSaveOps.java
 
