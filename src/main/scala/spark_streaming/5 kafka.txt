@@ -1,0 +1,181 @@
+一、Kafka的概念、架构和用例场景：
+1、Kafka解析；
+2、Kafka的安装和实战。
+
+1、Kafka的概念：
+	Apache Kafka是分布式发布-订阅消息系统。
+	它提供了类似于JMS的特性，但是在设计实现上完全不同，此外它并不是JMS规范的实现。
+	Kafka是一种快速、可扩展的、设计内在就是分布式的，分区的和可复制的提交日志服务。
+
+	什么是消息组件:
+		微信、QQ、电话、邮件等通信媒介，这些通信媒介就是消息组件,发送者将消息推送到消息组件,
+		接受者被推送消息或者主动拉取消息(如邮件),
+		在发送信息时可以将内容进行分类，即所谓的Topic主题.
+	Kafka是一种消息通信组件,将不同对象组件粘合起来的纽带，且是解耦合方式传递数据:
+		kafka对消息保存时根据Topic（及发送消息内容）进行归类，发送消息者成为Producer,消息接受者成为Consumer,
+		此外kafka集群有多个kafka实例组成，每个实例(server)成为broker。
+
+	为何使用消息系统：
+	（1）解耦
+		在项目启动之初来预测将来项目会碰到什么需求，是极其困难的。
+		消息系统在处理过程中间插入了一个隐含的、基于数据的接口层，两边的处理过程都要实现这一接口。
+		这允许你独立的扩展或修改两边的处理过程，只要确保它们遵守同样的接口约束。
+	（2）冗余
+		有些情况下，处理数据的过程会失败。除非数据被持久化，否则将造成丢失。
+		消息队列把数据进行持久化直到它们已经被完全处理，通过这一方式规避了数据丢失风险。
+		许多消息队列所采用的”插入-获取-删除”范式中:(类似WAL方式)
+		在把一个消息从队列中删除之前，需要你的处理系统明确的指出该消息已经被处理完毕，从而确保你的数据被安全的保存直到你使用完毕。
+	（3）扩展性
+		因为消息队列解耦了你的处理过程，所以增大消息入队和处理的频率是很容易的，只要另外增加处理过程即可。
+		不需要改变代码、不需要调节参数。扩展就像调大电力按钮一样简单。
+	（4）灵活性 & 峰值处理能力
+		在访问量剧增的情况下，应用仍然需要继续发挥作用，但是这样的突发流量并不常见；
+		如果以'能处理这类峰值访问'为标准来投入资源,这些平时用不到的资源为之随时待命无疑是巨大的浪费。
+		使用消息队列能够使关键组件顶住突发的访问压力，而不会因为突发的超负荷的请求而完全崩溃。
+	（5）可恢复性
+		系统的一部分组件失效(宕机停机维护等)时，不会影响到整个系统。
+		消息队列降低了进程间的耦合度，所以即使一个处理消息的进程挂掉，加入队列中的消息仍然可以在系统恢复后被处理。
+	（6）顺序保证
+		在大多使用场景下，数据处理的顺序都很重要。
+		大部分消息队列本来就是排序的，并且能保证数据会按照特定的顺序来处理。
+		Kafka保证一个Partition内的消息的有序性。
+	（7）缓冲
+		在任何重要的系统中，都会有需要不同的处理时间的元素(例如，加载一张图片比应用过滤器花费更少的时间);
+		消息队列通过一个缓冲层来帮助任务最高效率的执行———
+		(消息系统的)写入队列的处理会尽可能的快速,该缓冲有助于控制和优化数据流经过系统的速度。
+	（8）异步通信
+		很多时候，用户不想也不需要立即处理消息。
+		消息队列提供了异步处理机制，允许用户把一个消息放入队列，但并不立即处理它。
+		想向队列中放入多少消息就放多少，然后在需要的时候再去处理它们。
+	综上:
+		kafka消息系统对整个系统的 前端生成数据部件 与 数据处理部件 进行解耦,
+		Kafka本身(Broker)能对消息存储到磁盘(缓冲),并进行冗余设计
+		以上三种性质保证了整个系统的:
+		扩展性,灵活性/峰值处理能力,异步通信
+		另外kafka的解耦作用以及partition设计:保证一个Partition内的消息的有序性
+
+	Apache Kafka与传统消息系统相比，有以下不同的特点：
+		（1）分布式系统，易于向外扩展；
+		（2）在线低延迟，同时为发布和订阅提供高吞吐量；
+		（3）将消息存储到磁盘，因此可以处理1天甚至1周前内容
+
+3、Kafka的架构：
+	Kafka既然具备消息系统的基本功能，那么就必然会有组成消息系统的组件：Topic，Producer和Consumer。
+	Kafka还有其特殊的Kafka Cluster组件。
+	如图:
+	Producer1,2,3...-->Kafka Cluster-->Consumer1,2,3...
+
+	Topic主题：
+	代表一种数据的类别或类型，工作、娱乐、生活有不同的Topic，
+	生产者需要说明把说明数据分别放在那些Topic中，里面就是一个个小对象，并将数据数据推到Kafka，
+	消费者获取数据是pull的过程。
+	topic的partition/replication
+	一组相同类型(topic)的消息数据流,这些消息在Kafka会被分区存放，并且有多个副本，以防数据丢失。
+	每个分区的消息是顺序写入到磁盘上，并且不可改写。
+	内在深入理解参考:
+		http://www.cnblogs.com/chushiyaoyue/p/5695826.html
+	Topic结构简单描述:
+	Writers-->topic[Partition1[(new)..5,3,4,2,1,0(old)],Partition2,Partition3]
+	每个Partition又进行了replication,分布在kafka集群的不同Broker对应path下
+
+    Producer（生产者）：把数据推到Kafka系统的任何对象。
+        Kafka Cluster（Kafka集群）：把推到Kafka系统的消息保存起来的一组服务器，也叫Broker。
+        因为Kafka集群用到了Zookeeper作为底层支持框架，
+        所以由一个选出的服务器作为Leader来处理所有消息的读和写的请求，
+        其他服务器作为Follower接受Leader的广播同步备份数据，以备灾难恢复时用。
+
+    Consumer（消费者）：从Kafka系统订阅消息的任何对象。
+		消费者可以有多个，并且某些消费者还可以组成Consumer Group。
+		多个Consumer Group之间组成消息广播的关系，所以各个Group可以拉相同的消息数据。
+		在Consumer Group内部，各消费者之间对Consumer Group拉出来的消息数据是队列先进先出的关系，
+		某个消息数据只能给该Group的一个消费者使用。
+
+		如下表示:
+		对partition用p表示,每个Broker即Server用S表示,ConsumerGroup用CG表示,而Consumer用C表示
+		一个Topic为例:在Kafka集群中分配的partition如下:
+		[S1(p1,p3),S2(p2,p4)] ==> {CG1[C1,C2],CG2[C3,C4,C5,C6]}
+		这里partition的具体分配如下:
+		CG级别的广播模式: S1-->CG1+CG2,S2-->CG1+CG2
+		CG内部的C级别是队列模式:
+			在CG1是消费来自整个Topic所有partition的,
+			当从S1中拉取过来一个P1时,CG1队列比如说:C1排在C2前,C1来消费P1,
+			拉过来P2,这时候C1已经走了,排到C2,然后这个P2给C2消费,
+			这里注意:由于每个C会消费一个整的P,而拉过来的每个P先后顺序不确定,而且C消费时间长短也不确定
+			所有kafka保证数据是P级别的有序
+
+	ZeroCopy技术
+		数据传输基于kernel（内核）级别的（传输速度接近0拷贝-ZeroCopy）、没有用户空间的参与。
+		Linux本身是软件，软件启动时第一个启动进程叫init，在init进程启动后会进入用户空间；
+			例如：在分布式系统中，机器A上的应用程序需要读取机器B上的Java服务数据，
+			由于Java程序对应的JVM是用户空间级别而且数据在磁盘上，
+			A上应用程序读取数据时会首先进入机器B上的内核空间再进入机器B的用户空间，
+			读取用户空间的数据后，数据再经过B机器上的内核空间分发到网络中，
+			机器A网卡接收到传输过来的数据后再将数据写入A机器的内核空间，从而最终将数据传输给A的用户空间进行处理。
+			如下图(传统read/write数据多次copy)：
+			B: Disk-->Kernel Space(页缓存)-->User Space(JVM)-->Kernel Space(socket缓存区)-->NetWork网卡
+		外部系统从Java程序中读取数据，传输给内核空间并依赖网卡将数据写入到网络中，从而把数据传输出去。
+		其实Java本身是内核的一层外衣，Java Socket编程，操作的各种数据都是在JVM的用户空间中进行的。
+
+		而Kafka操作数据是放在内核空间的，通常内核空间处理数据的速度比用户空间快上万倍，
+		所以通过kafka可以实现高速读、写数据
+		java nio/netty/kafka使用了zero Copy技术
+		zeroCopy参考:
+			http://blog.csdn.net/hzrandd/article/details/51025341
+	kafka简介其他参考
+		http://blog.csdn.net/suifeng3051/article/details/48053965
+		http://blog.csdn.net/qinzhaokun/article/details/50486916
+
+
+二：Kafka的安装：
+	参考官方doc
+	http://kafka.apache.org/intro.html
+	http://kafka.apache.org/quickstart
+	1、最详细的Zookeeper安装和配置
+	Kafka集群模式需要提前安装好Zookeeper。
+	提示：Kafka单例模式不需要安装额外的Zookeeper，可以使用内置的Zookeeper。
+	Kafka集群模式需要至少3台服务器。本课实战用到的服务器Hostname：master，slave1，slave2。
+	下载官网里的的zookeeper-3.4.6.tar.gz 安装文件。
+	1) 安装Zookeeper
+	提示：下面的步骤发生在master服务器。
+	2) 配置Zookeeper
+		export ZOOKEEPER_HOME=/opt/modules/zookeeper-3.4.6
+	4）创建并打开zoo.cfg文件
+	5）配置zoo.cfg，See: conf/zoo.cfg
+	6）配置myid文件: echo 1 > $ZOOKEEPER_HOME/myid
+	7) 同步master的安装和配置到slave1和slave2
+		这里自己编写一个脚本进行复制xcp $ZOOKEEPER_HOME
+		See : shell/xcp.sh
+		并修改每个myid
+	8) 在每个节点启动Zookeeper服务验证Zookeeper是否安装和启动成功
+		zkServer.sh start
+		jps
+		zkServer.sh status
+
+	2,Kafka的安装配置
+	下载kafka_2.10-0.9.0.1.tgz。安装Kafka
+	2) 配置Kafka
+	export KAFKA_HOME=/opt/modules/kafka
+	最后修改PATH：
+	(2)配置server.properties，初步修改为下方这样，后期将会进行跟复杂的修改，已达到性能最优情况：
+	See:server.properties
+	同步master的安装和配置到slave1和slave2
+	xcp.sh $KAFKA_HOME
+    修改该其他机器的config/server.properties中的broker.id
+	4) 在各个节点启动Kafka服务
+	See :kafka_start.sh
+	通过启动日志和jps验证Kafka是否安装和启动成功
+    在任意服务器上运行命令创建Topic“HelloKafka”：
+        See: kafka_topic_create.sh
+    在任意服务器上运行命令为创建的Topic“HelloKafka”生产一些消息：
+		See: kafka_producer.sh
+	在shell或控制台中输入消息内容
+	在任意服务器上运行命令从指定的Topic“HelloKafka”上消费（拉取）消息：
+		See: kafka_consumer.sh
+	你会看到打印出之前输入的消息内容
+	在任意服务器上运行命令查看所有的Topic名字：
+		See: kafka_topic_list.sh
+	在任意服务器上运行命令查看指定Topic的概况：
+		See: kafka_topic_describe.sh
+其他参考:
+	http://www.cnblogs.com/chushiyaoyue/p/5695826.html
+	http://18610086859.blog.51cto.com/11484530/1769827

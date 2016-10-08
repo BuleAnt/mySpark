@@ -1,0 +1,110 @@
+Spark streaming基于kafka 以Receiver方式获取数据 原理,案例和源码
+
+一:SparkStreaming on Kafka Receiver 简介：
+	1、Spark-Streaming获取kafka数据的两种方式-Receiver与Direct的方式，
+		可以从代码中简单理解成Receiver方式是通过zookeeper来连接kafka队列，
+		Direct方式是直接连接到kafka的节点上获取数据了。
+	2、基于Receiver的方式：
+		这种方式使用Receiver来获取数据。Receiver是使用Kafka的高层次Consumer API来实现的。
+		receiver从Kafka中获取的数据都是存储在Spark Executor的内存中的，然后Spark Streaming启动的job会去处理那些数据。
+		然而，在默认的配置下，这种方式可能会因为底层的失败而丢失数据。
+		如果要启用高可靠机制，让数据零丢失，就必须启用Spark Streaming的预写日志机制（Write Ahead Log，WAL）。
+		该机制会同步地将接收到的Kafka数据写入分布式文件系统（比如HDFS）上的预写日志中。
+		所以，即使底层节点出现了失败，也可以使用预写日志中的数据进行恢复。
+
+	补充说明：
+	（1）、Kafka中的topic的partition，与Spark中的RDD的partition是没有关系的。
+		所以，在KafkaUtils.createStream()中，提高partition的数量，只会增加一个Receiver中，读取partition的线程的数量。
+		不会增加Spark处理数据的并行度。
+	（2）、可以创建多个Kafka输入DStream，使用不同的consumer group和topic，来通过多个receiver并行接收数据。
+	（3）、如果基于容错的文件系统，比如HDFS，启用了预写日志机制，接收到的数据都会被复制一份到预写日志中。
+		因此，在KafkaUtils.createStream()中，设置的持久化级别是StorageLevel.MEMORY_AND_DISK_SER。
+
+	SparkStreaming on Kafka Receiver 工作原理图如下所示：
+		Driver[StreamingContext-->(DStreamGraph,JobGenerator,JobScheduler)]
+			StreamingContext:在实例化的时候创建实例:DStreamGraph,JobGenerator,JobScheduler
+			StreamingContext-->(通过Timer不断固定间隔的产生Job)-->JobGenerator:
+				JobGenerator根据Batch Interval例如说1秒钟不断的产生Job
+				(其实此时的Job想短语Java中Runnable类型实例)
+				Job会提交给JobScheduler
+			StreamingContext-->JobScheduler:
+				JobScheduler接受到Job后会通过线程池的方式提交给SparkCluster执行
+		Executor[KafkaReceiver]:
+			根据设定的BatchInternal不断通过(多)线程获取Kafka中数据
+			然后通过BlockManager存储到Executor
+			为了数据安全采用WAL
+		数据流程:
+		KafkaCluster-->Executor[KafkaReceiver]-->Driver[ReceiverTracker-->JobGenerator]
+
+二: SparkStreaming on Kafka Receiver案例实战：
+	1、在进行SparkStreaming on Kafka Receiver案例的环境前提：
+	启动集群和zookeeper和kafka在这里我采用local的方式进行试验，代码如下：
+	Code See :Kafka2Streaming.java
+
+	2、SparkStreaming on Kafka Receiver运行在集群上的步骤及结果：
+	首先启动zookeeper服务：shell/zkServer_start.sh
+	运行Kafka2Streaming.java
+	接下来启动Kafka server服务:shell/kafka_start.sh
+	启动一个kafka producer:shell/kafka_producer.sh
+	输入内容,并在控制台中查看Kafka2Streaming.java的输入
+
+三: SparkStreaming on Kafka Receiver源码解析
+	1,首先看一下KafkaUtils(包含zookeeper的配置等等):
+
+	  /**
+        * Create an input stream that pulls messages from Kafka Brokers.
+        * @param ssc       StreamingContext object
+        * @param zkQuorum  Zookeeper quorum (hostname:port,hostname:port,..) //使用zk服务获取Kafka信息
+        * @param groupId   The group id for this consumer
+        * @param topics    Map of (topic_name -> numPartitions) to consume. Each partition is consumed
+        *                  in its own thread
+        * @param storageLevel  Storage level to use for storing the received objects
+        *                      (default: StorageLevel.MEMORY_AND_DISK_SER_2) //内存和磁盘存储
+        * @return DStream of (Kafka message key, Kafka message value) //自动生成
+        */
+       def createStream(
+	2、 createStream()最终创建了KafkaInputDStream：
+
+		 def createStream[K: ClassTag, V: ClassTag, U <: Decoder[_]: ClassTag, T <: Decoder[_]: ClassTag](
+		      ssc: StreamingContext,
+		      kafkaParams: Map[String, String],
+		      topics: Map[String, Int],
+		      storageLevel: StorageLevel
+		    ): ReceiverInputDStream[(K, V)] = {
+		    val walEnabled = WriteAheadLogUtils.enableReceiverLog(ssc.conf)
+		    new KafkaInputDStream[K, V, U, T](ssc, kafkaParams, topics, walEnabled, storageLevel)
+		  }
+
+	3、KafkaInputDStream的onStart方法中,可以看到KafkaInputStream内部使用了Kafka的consumer
+
+		  def onStart() {
+			//....省略
+			//通过配置信息zookeeper.connect来new出zookeeper的连接
+		    val zkConnect = kafkaParams("zookeeper.connect")
+
+		    // 创建一个集群的连接
+		    val consumerConfig = new ConsumerConfig(props)
+		    // 这里的Consumer是kafka.consumer包下的
+		    consumerConnector = Consumer.create(consumerConfig)
+	4、onStart方法中拥有线程池executorPool（来处理topic）
+
+		    // 为每一个监听到的Topic/message创建线程
+		    val topicMessageStreams = consumerConnector.createMessageStreams(topics, keyDecoder, valueDecoder)
+
+		    val executorPool =
+		      ThreadUtils.newDaemonFixedThreadPool(topics.values.sum, "KafkaMessageHandler")
+
+	5，getReceiver()方法可以采用不同的接受数据方式
+		(其中ReliableKafkaReceiver为write-ahead log的方式,
+		可配置spark.streaming.receiver.writeAheadLog.enable为true激活)
+
+			 def getReceiver(): Receiver[(K, V)] = {
+		        if (!useReliableReceiver) {
+		          new KafkaReceiver[K, V, U, T](kafkaParams, topics, storageLevel)
+		        } else {
+		          new ReliableKafkaReceiver[K, V, U, T](kafkaParams, topics, storageLevel)
+		        }
+		      }
+
+	主要参考:
+		http://blog.csdn.net/erfucun/article/category/6312409/2
