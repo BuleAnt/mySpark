@@ -70,17 +70,20 @@ Spark Streaming就是Spark Core上的一个应用程序。
 二、SparkStreaming 实现在线热点搜索词实战
 	1、经过分析我们采用reduceByKeyAndWindow的方法，reduceByKeyAndWindow方法分析如下：
 
-	从代码上面来看， 入口为：
-	reduceByKeyAndWindow(_+_, _-_, Duration, Duration)
-	一步一步跟踪进去， 可以看到实际的业务类是在ReducedWindowedDStream 这个类里面：
-	代码理解就直接拿这个类来看了：
+	//第二种方式:
+	从代码上面来看， 入口为：reduceByKeyAndWindow(_+_, _-_, Duration, Duration)
 
+	一步一步跟踪进去， 可以看到实际的业务类是在ReducedWindowedDStream 这个类里面：
+	org.apache.spark.streaming.dstream.ReducedWindowedDStream
+	compute函数核心代码:
+	代码理解就直接拿这个类来看了：
 	val mergedValuesRDD = cogroupedRDD.asInstanceOf[RDD[(K, Array[Iterable[V]])]]
 	      .mapValues(mergeValues)
-	先计算oldRDD 和newRDD
+	一开始先计算oldRDD 和newRDD
 	//currentWindow 就是以当前时间回退一个window的时间再向前一个batch 到当前时间的窗口 代码里面有一个图很有用：
 	我们要计算的new rdd就是15秒-25秒期间的值， oldRDD就是0秒到10秒的值， previous window的值是1秒 - 15秒的值
-	然后最终结果是 重复区间（previous window的值 - oldRDD的值） =》 也就是中间重复部分， 再加上newRDD的值， 这样的话得到的结果就是10秒到25秒这个时间区间的值
+	然后最终结果是 重复区间（previous window的值 - oldRDD的值）
+	==> 也就是中间重复部分，再加上newRDD的值，这样的话得到的结果就是10秒到25秒这个时间区间的值
 		// 0秒                  10秒     15秒                25秒
 		//  _____________________________
 		// |  previous window   _________|___________________
@@ -92,6 +95,7 @@ Spark Streaming就是Spark Core上的一个应用程序。
 		//          V                             V
 		//       old RDDs                     new RDDs
 		//
+
 	reduceByWindow(reduceFunc, windowDuration, slideDuration) 代码：
 	可以看到他做了两次reduce， 第一次对整个self做一次reduce， 然后截取时间区间， 对结果再做一次reduce。
 

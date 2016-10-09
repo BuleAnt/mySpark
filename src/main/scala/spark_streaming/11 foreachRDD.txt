@@ -1,0 +1,132 @@
+通过Spark Streaming的foreachRDD把处理后的数据写入外部存储系统中
+    技术实现foreachRDD与foreachPartition解析
+    foreachRDD与foreachPartition实现实战
+
+一：技术实现foreach解析：
+	翻译自官方doc:
+	http://spark.apache.org/docs/1.6.1/streaming-programming-guide.html#output-operations-on-dstreams
+	1、首先我们看一下Output Operations on DStreams提供的API：
+	SparkStreaming的DStream提供了一个dstream.foreachRDD方法，
+	该方法是一个功能强大的原始的API，它允许将数据发送到外部系统。
+	然而,重要的是要了解如何正确有效地使用这种原始方法。一些常见的错误,以避免如下：
+	写数据到外部系统，需要建立一个数据连接对象（例如TCP连接到远程的服务器），使用它将数据发送到外部存储系统。
+	为此开发者可能会在Driver中尝试创建一个连接，然后在worker中使用它来保存记录到外部数据。代码如下：
+		dstream.foreachRDD { rdd =>
+		  val connection = createNewConnection()  // executed at the driver
+		  rdd.foreach { record =>
+		    connection.send(record) // executed at the worker
+		  }}
+	上面的代码是一个错误的演示，因为连接是在Driver中创建的，而写数据是在worker中完成的。
+	此时连接就需要被序列化然后广播发送到worker中。
+	但是我们知道，连接的信息是不能被序列化和反序列化的（不同的机器连接服务器需要使用不同的服务器端口，即便连接被序列化了也不能使用）
+
+	进而我们可以将连接移动到worker中实现，代码如下：
+		dstream.foreachRDD { rdd =>
+		  rdd.foreach { record =>
+		    val connection = createNewConnection()
+		    connection.send(record)
+		    connection.close()
+		  }}
+	但是此时，每处理一条数据记录，就需要连接一次外部系统，这将会有很大的时间成本和资源开销,cpu大部分时间会在创建连接关闭连接,
+	对于性能来说是个严重的问题,内存很快就可能耗尽崩溃,这也不是一个完美的实现。
+
+	我们可以将代码做如下的改进：
+	rdd有partition,在worker上基于partition创建一个连接,然后foreach这个partition讲record发送,这样会好很多
+		dstream.foreachRDD { rdd =>
+		  rdd.foreachPartition { partitionOfRecords =>
+		    val connection = createNewConnection()
+		    partitionOfRecords.foreach(record => connection.send(record))
+		    connection.close()
+		  }}
+	关于foreachPartition其他:
+		Spark基于RDD进行编程，RDD的数据不变，但是如果擅长使用foreachPartition的话,可以改变其底层的数据，做到的方式是:
+		foreachPartition操作一个数据结构，数据结构保存RDD里面一条条数据，从数据结构来说,控制索引,使这一条条的记改变;
+		所以spark也可以运行在动态数据源上。（就像数组的数据不变，但是指向的索引可以改变）
+
+
+	这样一个partition，只需连接一次外部存储。性能上有大幅度的提高。但是不同的partition之间不能复用连接。
+	我们可以使用连接池的方式，使得partition之间可以共享连接。代码如下：
+		stream.foreachRDD { rdd =>
+		  rdd.foreachPartition { partitionOfRecords =>
+		    // ConnectionPool is a static, lazily initialized pool of connections
+		    val connection = ConnectionPool.getConnection()
+		    partitionOfRecords.foreach(record => connection.send(record))
+		    ConnectionPool.returnConnection(connection)  // return to the pool for future reuse
+		  }}
+
+	注:DStream的foreachRDD操作是不会导致RDD的执行,导致RDD直接执行的是内部使用RDD的action操作
+
+二：foreachRDD与foreachPartition实现实战
+
+1、需要注意的是：
+	（1）、你最好使用forEachPartition函数来遍历RDD，并且在每台Work上面创建数据库的connection。
+	（2）、如果你的数据库并发受限，可以通过控制数据的分区来减少并发。
+	（3）、在插入MySQL的时候最好使用批量插入。
+	（4），确保你写入的数据库过程能够处理失败，因为你插入数据库的过程可能会经过网络，这可能导致数据插入数据库失败。
+	（5）、不建议将你的RDD数据写入到MySQL等关系型数据库中。
+
+2、下面我们使用SparkStreaming实现将数据写到MySQL中：
+
+	（1）在pom.xml中加入如下依赖包
+		<dependency>
+		    <groupId>mysql</groupId>
+		    <artifactId>mysql-connector-java</artifactId>
+		    <version>5.1.38</version>
+		</dependency>
+		<dependency>
+		    <groupId>commons-dbcp</groupId>
+		    <artifactId>commons-dbcp</artifactId>
+		    <version>1.4</version>
+		</dependency>
+	2）在MySql中创建数据库和表，命令操作如下：
+	mysql -uroot -proot
+	create database streaming;
+	use streaming;
+	show tables;
+	create table item_count(item varchar(30),count int);
+
+	代码See: spark_streaming.ConnectionPool.java, ForeachRDD2DB.scala
+
+---------------------------------------------------------------------------------
+
+SparkStreaming+SparkSQL实现实战：
+    String+SQL技术实现解析
+    Streaming+SQL实现实战
+
+一：SparkString+SparkSQL技术实现解析：
+
+	使用Spark Streaming + Spark SQL 来在线计算电商中不同类别中最热门的商品排名，
+		例如手机这个类别下面最热门的三种手机、电视
+		这个类别下最热门的三种电视，该实例在实际生产环境下具有非常重大的意义；
+	实现技术：SparkStreaming+Spark SQL,
+	之所以SparkStreaming能够使用ML、sql、graphx等功能是因为有foreach何Transformation等接口，
+	这些接口中其实是基于RDD进行操作的，所以以RDD为基石，就可以直接使用Spark其他所有的功能，就像直接调用API一样简单，
+	假设说这里的数据的格式：user item category，例如Rocky Samsung Android
+
+二：SparkStreaming+SparkSQL实现实战：
+	Top3ItemForEachCategory2DB.scala
+	2. 接下来将代码打包放到集群中，并且写好shell脚本
+	/usr/local/spark/bin/spark-submit --files /usr/local/hive/conf/hive-site.xml --driver-class-path /usr/local/spark/lib/mysql-connector-java-5.1.35-bin.jar
+	/root/Documents/SparkApps/SparkStreamingApps.jar
+	3、启动集群以及Hive 服务：
+
+	hive --service metastore &
+	4、进入MySQL中创建表：
+
+	drop table streaming.category_top3;
+	create table category_top3 (category varchar(500),item varchar(2000),client_count int);
+	5、启动作业，以及打开nc -lk 9999服务
+zhangsan samsung android
+linda samsung android
+june samsung android
+lisi huawei android
+wangwu samsung android
+xiaoming apple iphone
+xiaoliu xiaomi android
+xiaodong apple iphone
+jeck huawei android
+tom lg android
+sam oppo android
+jerry huawei android
+jams apple iphone
+

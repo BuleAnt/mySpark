@@ -9,8 +9,11 @@ import org.apache.spark.streaming.{Seconds, StreamingContext}
   * 只进行有效的广告点击计费
   *
   * 实现技术：使用transform Api直接基于RDD编程，进行join操作
+  *
+  * 官方给出相关代码:参考
+  * https://github.com/apache/spark/blob/master/examples/src/main/scala/org/apache/spark/examples/streaming/RecoverableNetworkWordCount.scala
   */
-object OnlineBlackListFilter {
+object BlackListFilter {
 	def main(args: Array[String]) {
 		val conf = new SparkConf()
 		conf.setAppName("OnlineBlackListFilter")
@@ -51,6 +54,7 @@ object OnlineBlackListFilter {
 			val validClicked = joinedBlackListRDD.filter(!_._2._2.getOrElse(false))
 			// 返回过滤后的_._2._1就是tuple2中的(time,name)
 			validClicked.map(_._2._1)
+
 			/**
 			  * 计算后的有效数据一般都会写入Kafka中，下游的计费系统会从kafka中pull到有效数据进行计费
 			  */

@@ -10,9 +10,19 @@ import java.util.Properties;
 import java.util.Random;
 
 /**
- * SparkStreamingDataManuallyProducerForKafka
+ * KafkaProducerDataManually
+ * 论坛数据自动生成代码,该生成的数据会作为Producer的方式发送给Kafka,
+ * 然后SparkStreaming程序会从Kafka中在线Pull到论坛或者网站的用户在线行为信息,
+ * 进而进行多维度的在线分析
+ * 格式:
+ * data:日期
+ * timestamp:时间戳
+ * userID:用户ID
+ * pageID:页面ID
+ * channelID:板块ID
+ * action:点击和注册
  */
-public class SparkStreamingDataManuallyProducerForKafka extends Thread {
+public class KafkaProducerDataManually extends Thread {
 
 	//具体的论坛频道
 	private static String[] channelNames = new String[]{
@@ -28,21 +38,29 @@ public class SparkStreamingDataManuallyProducerForKafka extends Thread {
 	private static String dateToday;
 	private static Random random;
 
-	public SparkStreamingDataManuallyProducerForKafka(String topic) {
-//      格式 化器
+
+	public static void main(String[] args) {
+
+		new KafkaProducerDataManually("UserLogs").start();
+
+	}
+
+
+	public KafkaProducerDataManually(String topic) {
+		//日期格式化
 		dateToday = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
 		this.topic = topic;
 		random = new Random();
-//        设置参数
+
+		//设置参数
 		Properties conf = new Properties();
-		conf.put("metadata.broker.list", "Master:9092,Worker1:9092,Worker2:9092");
-//        Kafka在生成的时候有个key,key的序列化器，这是默认的方式
+		conf.put("metadata.broker.list", "hadoop:9092");
+		//Kafka在生成的时候有个key,key的序列化器，这是默认的方式
 		conf.put("serializer.class", "kafka.serializer.StringEncoder");
-//        基于这些内容，创建构造器Produce
-		producerForKafka = new Producer<Integer, String>(new ProducerConfig(conf));
+		//基于这些内容，构造器创建Kafka的Produce
+		producerForKafka = new Producer<>(new ProducerConfig(conf));
 	}
 
-	//对于线程而言得有run方法，我们得复写这个run方法
 	@Override
 	public void run() {
 		int counter = 0;
@@ -50,7 +68,8 @@ public class SparkStreamingDataManuallyProducerForKafka extends Thread {
 			counter++;
 			String userLog = userlogs();
 			System.out.println("product:" + userLog);
-//          topic ,就是这个消息属于哪个topic，这个时候就一直发消息
+
+			// 通过topic和userLog构建KeyedMessage,Producer将该消息发送出去
 			producerForKafka.send(new KeyedMessage<Integer, String>(topic, userLog));
 
 			if (0 == counter % 500) {
@@ -58,7 +77,6 @@ public class SparkStreamingDataManuallyProducerForKafka extends Thread {
 				try {
 					Thread.sleep(1000);
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -66,13 +84,7 @@ public class SparkStreamingDataManuallyProducerForKafka extends Thread {
 	}
 
 
-	public static void main(String[] args) {
-
-		new SparkStreamingDataManuallyProducerForKafka("UserLogs").start();
-
-	}
-
-
+	//动态生成一条日志
 	private static String userlogs() {
 
 		StringBuffer userLogBuffer = new StringBuffer("");
@@ -98,20 +110,13 @@ public class SparkStreamingDataManuallyProducerForKafka extends Thread {
 		//随机生成action行为
 		String action = actionNames[random.nextInt(2)];
 
-
-		userLogBuffer.append(dateToday)
-				.append("\t")
-				.append(timestamp)
-				.append("\t")
-				.append(userID)
-				.append("\t")
-				.append(pageID)
-				.append("\t")
-				.append(channel)
-				.append("\t")
-				.append(action)
-				.append("\n");
-
+		userLogBuffer.append(dateToday).append("\t")
+				.append(timestamp).append("\t")
+				.append(userID).append("\t")
+				.append(pageID).append("\t")
+				.append(channel).append("\t")
+				.append(action);
+		//.append("\n");
 
 		return userLogBuffer.toString();
 

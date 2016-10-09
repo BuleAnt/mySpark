@@ -5,10 +5,10 @@ import java.sql.DriverManager;
 import java.util.LinkedList;
 
 /**
- * 使用Java编写一个数据库连接池类
+ * 使用Java编写一个最基本数据库连接池类
  */
-public class JConnectionPool {
-	private static LinkedList<Connection> connectionQueue;
+public class ConnectionPool {
+	public static LinkedList<Connection> connectionQueue;
 
 	static {
 		try {
@@ -24,9 +24,7 @@ public class JConnectionPool {
 				connectionQueue = new LinkedList<>();
 				for (int i = 0; i < 5; i++) {
 					Connection conn = DriverManager.getConnection(
-							"jdbc:mysql://Master:3306/sparkstreaming",
-							"root",
-							"12345");
+							"jdbc:mysql://hadoop:3306/streaming", "root", "root");
 					connectionQueue.push(conn);
 				}
 			}
@@ -37,7 +35,7 @@ public class JConnectionPool {
 
 	}
 
-	public static void returnConnection(Connection conn) {
+	public synchronized static void returnConnection(Connection conn) {
 		connectionQueue.push(conn);
 	}
 }
