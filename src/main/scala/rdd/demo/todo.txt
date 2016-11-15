@@ -1,0 +1,7 @@
+spark实现hive的合并输入很多小文件为指定大小的大文件的优化功能
+https://github.com/RetailRocket/SparkMultiTool
+http://blog.csdn.net/xiao_jun_0820/article/details/44309147
+
+http://blog.csdn.net/xiao_jun_0820/article/details/44338081
+ shell执行scala脚本
+http://blog.csdn.net/xiao_jun_0820/article/details/44652929

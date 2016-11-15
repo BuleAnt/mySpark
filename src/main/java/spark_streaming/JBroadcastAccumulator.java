@@ -26,19 +26,20 @@ public class JBroadcastAccumulator {
 
 	public void main(String[] args) throws InterruptedException {
 
-		SparkConf conf = new SparkConf().setMaster("local[2]").
-				setAppName("SparkStreamingBroadcastAccumulator");
-
+		SparkConf conf = new SparkConf().setMaster("local[2]")
+				.setAppName("SparkStreamingBroadcastAccumulator");
 
 		JavaStreamingContext jsc = new JavaStreamingContext(conf, Durations.seconds(15));
 
-		//实例化我们的broadcast,使用Broadcast广播黑名单到每个Executor中
+		/**
+		 * 实例化broadcast,使用Broadcast广播黑名单到每个Executor中
+		 */
 		broadcastList = jsc.sparkContext().broadcast(Arrays.asList("Hadoop", "Mahout", "Hive"));
 		/**
 		 * 全局计数器，用于统计在线过滤多少黑名单
+		 * broadcast/accumulator结合运用会有非常强大的作用,企业大型项目复杂业务逻辑很多是在此基础上进行的
 		 */
 		accumulator = jsc.sparkContext().accumulator(0, "OnlineBlacklistCount");
-
 		JavaReceiverInputDStream<String> lines = jsc.socketTextStream("Master", 9999);
 
 		JavaPairDStream<String, Integer> pairs = lines.mapToPair(new PairFunction<String, String, Integer>() {
@@ -54,36 +55,32 @@ public class JBroadcastAccumulator {
 			}
 		});
 
-        /*过滤黑明单我们一般把内容写在foreach中*/
-
+        //过滤黑名单,我们一般把内容写在foreachRDD中
 		wordsCount.foreachRDD(new Function2<JavaPairRDD<String, Integer>, Time, Void>() {
 
 			public Void call(JavaPairRDD<String, Integer> rdd, Time time) throws Exception {
+				//filter
 				rdd.filter(new Function<Tuple2<String, Integer>, Boolean>() {
 					public Boolean call(Tuple2<String, Integer> wordPair) throws Exception {
 						if (broadcastList.value().contains(wordPair._1)) {
 							accumulator.add(wordPair._2);
 							return false;
-
 						} else {
 							return true;
 						}
 					}
-
-
 				}).collect();
 
-//                System.out.println(broadcastList.value().toString() + ":" + accumulator.value());
+				// 过滤出来的内容,计数
+				// System.out.println(broadcastList.value().toString() + ":" + accumulator.value());
 				System.out.println("BlackList append : " + ":" + accumulator.value() + "times");
 				return null;
 			}
 		});
 
-
+		//wordsCount.print();
 		jsc.start();
-
 		jsc.awaitTermination();
-
 		jsc.close();
 	}
 }

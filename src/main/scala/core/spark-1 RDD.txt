@@ -34,8 +34,8 @@ RDD:弹性分布式数据集(DataSet):Rdd的数据会分片到很多机器节点
 	
 RDD Operations
 1.RDD创建
-2.RDD Tansformation
-3.RDD acrtion
+2.RDD Transformation
+3.RDD action
 4.RDD cache
 ================================================
 复习:
@@ -87,8 +87,8 @@ groupByKey([numTasks]) ,分组
 reduceByKey(func, [numTasks]) ,按照key进行reduce合并
 aggregateByKey(zeroValue)(seqOp, combOp, [numTasks]) ,
 sortByKey([ascending], [numTasks]) ,按照key进行sort
-join(otherDataset, [numTasks]) ,加入,
-cogroup(otherDataset, [numTasks]) ,cartesian(otherDataset) ,pipe(command, [envVars]) ,coalesce(numPartitions) ,repartition(numPartitions) , repartitionAndSortWithinPartitions(partitioner) 
+join(otherDataSet, [numTasks]) ,加入,
+cogroup(otherDataSet, [numTasks]) ,cartesian(otherDataset) ,pipe(command, [envVars]) ,coalesce(numPartitions) ,repartition(numPartitions) , repartitionAndSortWithinPartitions(partitioner)
 
 常用的RDD action
 reduce(func) ,例如:reduce((_+_))
@@ -104,9 +104,9 @@ foreach(func) 遍历
 具体演示见spark-1
 Shuffle operations
 
-缓存RDD chache:将RDD缓存到内存当中去
+缓存RDD cache:将RDD缓存到内存当中去
 cache方法是延迟执行的,需要讲RDD进行一个action时才执行
 cache是persistent特殊缓存方式,将RDD放到内存中
-rdd.chache
+rdd.cache
 rdd.count()
 

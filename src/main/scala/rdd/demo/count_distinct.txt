@@ -1,0 +1,24 @@
+举个例子,比如要统计用户的总访问次数和去除访问同一个URL之后的总访问次数,随便造了几条样例数据(四个字段:id,name,vtm,url,vtm字段本例没用,不用管)如下:
+id1,user1,2,http://www.hupu.com
+id1,user1,2,http://www.hupu.com
+id1,user1,3,http://www.hupu.com
+id1,user1,100,http://www.hupu.com
+id2,user2,2,http://www.hupu.com
+id2,user2,1,http://www.hupu.com
+id2,user2,50,http://www.hupu.com
+id2,user2,2,http://touzhu.hupu.com
+根据这个数据集,我们可以写hql 实现:select id,name, count(0) as ct,count(distinct url) as urlcount from table group by id,name.
+
+得出结果应该是:
+
+id1,user1,4,1
+
+id2,user2,4,2
+
+下面用Spark实现这个聚合功能:
+SparkDemo2
+输出结果如下:
+
+((id1,user1),4,1)
+((id2,user2),4,2)
+与HQL输出一致.

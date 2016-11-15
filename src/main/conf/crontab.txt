@@ -1,0 +1,4 @@
+## crontab  -e
+
+
+* 04 * * 1 /home/hadoop/Documents/workspaces/idea/mySpark/src/main/shell/nginx_log_cat.sh

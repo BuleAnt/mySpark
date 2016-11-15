@@ -33,7 +33,11 @@
             <artifactId>spark-streaming-kafka_2.10</artifactId>
             <version>1.6.1</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-streaming-flume_2.10</artifactId>
+            <version>1.6.1</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-streaming_2.10</artifactId>
@@ -55,6 +59,7 @@
             <artifactId>spark-mllib_2.10</artifactId>
             <version>1.6.1</version>
         </dependency>
+
         <!--
                 <dependency>
                     <groupId>org.apache.spark</groupId>
@@ -72,7 +77,11 @@
                     <version>3.3.2</version>
                 </dependency>
         -->
-
+        <dependency>
+            <groupId>net.sf.json-lib</groupId>
+            <artifactId>json-lib</artifactId>
+            <version>2.4</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-client</artifactId>

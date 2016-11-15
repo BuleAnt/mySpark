@@ -1,6 +1,5 @@
 package spark_streaming
 
-import kafka.serializer.StringDecoder
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.streaming.kafka.KafkaUtils
@@ -30,25 +29,20 @@ object StreamingDemo {
 		}
 		val topics = topicsList.split(",").toSet
 
-		KafkaUtils.createDirectStream(ssc, kafkaParams, topics)
-				.map(_._2.asInstanceOf[String].split(",")).foreachRDD(rdd => {
+	/*	KafkaUtils.createDirectStream(ssc, kafkaParams, topics).map(_._2.asInstanceOf[String].split(",")).foreachRDD(rdd => {
 			val hiveContext = new HiveContext(rdd.context)
 
 			import hiveContext.implicits._
 			rdd.map(record => MessageItem(record(0).trim, record(1).trim.toInt))
 					.toDF().registerTempTable("temp")
 			hiveContext.sql("select count(*) from temp").show
-			//TODO 把数据写入到hive中,通过Java技术方位hive中的内容,
+			//TODO 把数据写入到hive中,通过Java技术访问hive中的内容,
 			//TODO 通过Flume做原始数据收集,Flume会作为Kafka的Producer,把数据写入到Kafka中供本程序使用
-
 		})
-
+*/
 		ssc.start()
 		ssc.awaitTermination()
 		ssc.stop()
-
-
 	}
-
 }
 

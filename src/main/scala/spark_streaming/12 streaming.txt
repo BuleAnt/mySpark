@@ -14,6 +14,7 @@
 	传统行业:金融,电信,医疗,农业,生产制造业
 	例如说:在京东进行广告的推送,当我们点击的逛好的时候,此时肯定有日志log发送会Server
 		或者说我们使用android,ios等中的app的时候,都设置有数据记录的关键点(埋点)
+
 	如果是网站,经典的方式是通过js通过Ajax把日志传回到服务器上,
 	如果移动app等一般是通过socket,其他的传感器或者工业设备都可以通过自己的通信协议把数据传回到服务端
 	-->通过Ajax或者Socket或者其它通信协议-->
@@ -35,12 +36,12 @@
 	在企业:大数据生产环境核心技术:kafka,hdfs,spark,redis
 	如果有第五个核心技术的化:kafka,hdfs,spark,redis,tachyon
 
-	Logs Cluster-->Flume-->Kafka Cluster-->SparkStreaming-->Ganglia,DB/Redi
+	Logs Cluster-->Flume-->Kafka Cluster-->SparkStreaming-->Ganglia,DB/Redis
 
 	在实际生产环境下大项目中用redis比较多,因为QPS可以非常高,尤其是在并发和实际要求比较高的场景特别有用
 	(3000万/h,job:5亿)
 
-	JDBC-->Java企业级别巨剑,获取DB数据并通过报表战士,提供营销运行,产品研发改进等
+	JDBC-->Java企业级别巨剑,获取DB数据并通过报表展示,提供营销运行,产品研发改进等
 
 	6）上面kafka的方式是在线数据分析，下面是离线数据分析。
 	日志上的数据当然可以如下图，直接放在hdfs上，但是实际生产环境下基本没有人直接把server上传的日志放在hdfs上。
@@ -52,11 +53,13 @@
 	Flume-->HDFS
 	1.使用MapReduce作业对数据进行初步清洗,并写入新的HDFS文件中
 	2.清晰后的数据一般导入到Hive数据仓库中,可以采用分区表
-	3.通过Hive中的SQL在数据仓库的基础上进行ETL,此时ETL会把原始的数据生成很多张目标table
+	3.通过Hive中的SQL在数据仓库的基础上进行ETL,此时ETL会把原始的数据生成很多张目标table,
 
 
 	上面数据仓库进行了多维度的ETL分析后，下面交给spark集群去处理。
-	在企业生产环境下，大多数如果是离线数据分析，Spark处理数据都是基于Hive的，分析后的结果用于提升营业额，利润和市场占有率。
+	在企业生产环境下，大多数如果是离线数据分析，Spark处理数据都是基于Hive的，
+	分析后的结果用于提升营业额，利润和市场占有率。
+
 	而kafka则是在线数据分析
 
 

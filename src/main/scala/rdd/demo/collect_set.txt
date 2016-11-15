@@ -1,0 +1,15 @@
+test.txt文件内容(随便造的,没具体含义)如下:
+id1,user1,2,http://www.hupu.com
+id1,user1,2,http://www.hupu.com
+id1,user1,3,http://www.hupu.com
+id1,user1,100,http://www.hupu.com
+id2,user2,2,http://www.hupu.com
+id2,user2,1,http://www.hupu.com
+id2,user2,50,http://www.hupu.com
+id2,user2,2,http://touzhu.hupu.com
+最终得出的结果为:
+
+100,3,2
+2,50,1
+
+和collect_set效果一致.

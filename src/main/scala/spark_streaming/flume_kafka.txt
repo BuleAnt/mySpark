@@ -1,0 +1,51 @@
+Flume Source的配置
+
+agent_lxw1234.sources = sources1
+agent_lxw1234.channels = fileChannel
+agent_lxw1234.sinks = sink1
+##source 配置
+agent_lxw1234.sources.sources1.type = com.lxw1234.flume17.TaildirSource
+agent_lxw1234.sources.sources1.positionFile = /tmp/flume/agent_lxw1234_position.json
+agent_lxw1234.sources.sources1.filegroups = f1
+agent_lxw1234.sources.sources1.filegroups.f1 = /tmp/lxw1234_.*.log
+agent_lxw1234.sources.sources1.batchSize = 100
+agent_lxw1234.sources.sources1.backoffSleepIncrement = 1000
+agent_lxw1234.sources.sources1.maxBackoffSleep = 5000
+agent_lxw1234.sources.sources1.channels = fileChannel
+
+该source用于监控/tmp/lxw1234_.*.log命名格式的文件。
+
+Flume Source拦截器配置
+
+## source 拦截器
+agent_lxw1234.sources.sources1.interceptors = i1
+agent_lxw1234.sources.sources1.interceptors.i1.type = regex_extractor
+agent_lxw1234.sources.sources1.interceptors.i1.regex = .*?\\|(.*?)\\|.*
+agent_lxw1234.sources.sources1.interceptors.i1.serializers = s1
+agent_lxw1234.sources.sources1.interceptors.i1.serializers.s1.name = key
+
+该拦截器（Regex Extractor Interceptor）用于从原始日志中抽取cookieid，访问到events header中，header名字为key。
+
+
+Flume Kafka Sink配置
+
+# sink 1 配置
+agent_lxw1234.sinks.sink1.type = org.apache.flume.sink.kafka.KafkaSink
+agent_lxw1234.sinks.sink1.brokerList = developnode1:9091,developnode1:9092,developnode2:9091,developnode2:9092
+agent_lxw1234.sinks.sink1.topic = lxw1234
+agent_lxw1234.sinks.sink1.channel = fileChannel
+agent_lxw1234.sinks.sink1.batch-size = 100
+agent_lxw1234.sinks.sink1.requiredAcks = -1
+agent_lxw1234.sinks.sink1.kafka.partitioner.class = com.lxw1234.flume17.SimplePartitioner
+
+该Sink配置为Kafka Sink，将接收到的events发送至kafka集群的topic：lxw1234中。
+其中topic：lxw1234创建时候指定了4个分区，Kafka Sink使用的分区规则为
+com.lxw1234.flume17.SimplePartitioner，它会读取events header中的key值（即cookieid），然后对cookieid应用于分区规则，以便确定该条events发送至哪个分区中。
+关于com.lxw1234.flume17.SimplePartitioner的介绍和代码，见
+
+Kafka消费者
+
+使用下面的Java程序从Kafka中消费数据，打印出每条events所在的分区。
+
+并从events中抽取cookieid，然后根据com.lxw1234.flume17.SimplePartitioner中的分区规则（Math.abs(cookieid.hashCode()) % 4）测试分区，看是否和获取到的分区一致。
+
