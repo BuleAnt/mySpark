@@ -1,0 +1,74 @@
+Hadoop Yarn的工作流程解密
+Spark on Yarn两种运行模式实战
+Spark on Yarn工作流程解密
+Spark on Yarn工作内部解密
+Spark on Yarn最佳实践
+
+一:Hadoop Yarn解析
+	Yarn是Hadoop推出的整个分布式(大数据)集群的资源管理器,负责资源管理和分配,
+	基于Yarn我们可以在同一个大数据集群上同时运行多个计算框架,例如Spark,MapReduce,Storm等.
+Yarn具体工作流程:
+	1) client提交一个app到RM,RM对NM下达命令,监控NM状态,NM向RM汇报资源,应用信息
+	client-->Resource Manager<==>Node Manager 1,2,3...--->
+	2) RM对NM下发命令后,NM在本节点启动一个AM应用程序MR APP,AM向RM申请资源Container
+	Node Manager1-->App Master-->Container-->RM-->
+	3) RM是一点点的发送Resource给AM,不是一次全给够,AM获取到资源后,分配资源给Task1,2,..
+	每个Task可能分布在不同的节点,那么AM将会将资源分发到对应的NM上,有NM来执行Task
+	MR APP Master(MapReduce为例,MR的Application Master)-->Task1,2,3,...--->NM1,2,3..
+文字完整描述:
+	客户端Client向RM提交Application,
+	RM接受应用,并根据集群资源状况决定在具体的某个Node上来启动当前提交的应用程序的Driver(ApplicationMaster),
+	决定后RM会命令具体的某个Node上的资源管理器NodeManager来启动一个新的JVM进程运行程序的Driver部分,
+	当Application启动的时候,会下载当前Application相关Jar等各种资源,并基于此决定具体向ResourceManager申请资源的具体内容,
+	RM接受到ApplicationMaster的资源分配的请求后,会最大化的满足资源分配的请求,并把资源的元数据信息发送给AppMaster,
+	AppMaster收到资源的元数据信息会根据元数据信息发指令给具体的机器上的NodeManager,让NM来启动具体的Container,
+	Container在启动后必须向AppMaster注册,当AppMaster获得用于计算的Containers后,开始进行任务的调度和计算,直到完成.
+
+	需要补充说明的是,如果RM第一次没有能够完全完成AppMaster分配资源的请求,
+	后续RM在发现集群中有新的可用资源时候,会主动向AppMaster发送新的可用资源的元数据信息以提供更多的资源用于当前程序的运行!!
+		1.如果Hadoop的MapReduce计算的话Container不可以复用,
+		如果Spark on Yarn的话Container(Spark的机制,container通过一个线程池来复用);
+		2.Container具体的销毁是有AppMaster来决定的.AppMaster发指令给NodeManager让NM销毁Container
+
+从每个角色的角度来看:
+	RM:处理client请求,启动监控AM,资源分配和调度
+	NM:管理单个节点资源container和任务task,处理RM的命令,AM的命令(启动AM,Task)
+	AM:数据切分(分配任务Task),为App请求资源container并分配给内部任务,任务的监控和容错
+	Container:任务运行环境(JVM)的抽象,封装了CPU,内存等多为资源以及环境变量,启动命令等任务运行相关信息
+Yarn其他特性:
+	Yarn双层调度:RM-->AM-->Task
+	资源预留:一个AM申请的资源过大,会慢慢积累,不像Oracle中的All or Nothing,要么一次性给完,要么就不给
+	其他可选信息:
+		多类型:cpu+内存
+		多种资源调度:FIFO,Fair,Capacity
+		多租户资源调度Scheduler:比例,层级,资源抢占
+		隔离:Cpu关系着App的快慢,内存却关系着生死.thread(线程),Cgroup
+		调度语义:一个节点/机架上特定资源,黑名单,归还Resources
+		不支持:任意节点,特定的Resources,一组特定的Resource,超细的,动态的
+	MR2 on Yarn
+		MR时间长,开销大,效率低.流程为
+		client-->RM-->NM-->AM-->Task[Map,Reduce](查看任务,并请求资源)-->
+		(请求资源)RM-->AM(分配资源)-->NM(分配资源和任务)-->Task(NM上启动Task)
+	优化MR:多个MR使用依赖关系,合并一个DAG,
+	技术:缓冲池,AMPoolServer,Container,预期定,重用
+
+Spark on Yarn 的两种运行模式实战:
+此时不需要启动Spark集群,只需要启动Yarn即可,Yarn的ResourceManager就相当于Spark Standalone模式下的Master!
+	1.Spark on Yarn的两种运行模式:
+		唯一的决定因素是当前Application从任务调度器Driver运行在什么地方!
+		a:Cluster模式:Driver运行在Hadoop Yarn集群下的某台机器上JVM进程中!!!
+		b:Client:Driver运行在当前提交程序的可与寄去上,
+		需要说明的是无论是什么模式,只要当前机器运行了Spark代码,就必须安装Spark!
+	2.Spark on Yarn的运行实战演示:
+		a:Client模式,方便在命令直接看到运行的过程信息,尤其方便做测试使用,命令如下
+		bin/spark-submit \
+		--master yarn \
+		--deploy-mode client \
+		--class org.apache.spark.examples.SparkPi \
+		lib/spark-examples-1.6.1-hadoop2.6.0.jar \
+		100
+
+天机解密:
+	Standalone模式下启动Spark集群(也就是启动Master和Worker)其实启动的是资源管理器,真正作业计算的时候和集群资源管理器没有任何关系,
+	所以spark的Job真正执行作业的时候不是运行在启动的Spark集群中的,而是运行在一个JVM中的,只要JVM所在的机器上安装配置了Spark即可!!!
+

@@ -8,116 +8,144 @@ Task数据本地性资源分配源码实现
 		所以主要就是实例化SparkContext并注册当前的应用程序给Master且从集群中获得ExecutorBackend计算资源;
 	2.DAGScheduler划分好Stage后会通过TaskSchedulerImpl中TaskSetManager来管理当前要运行的Stage中的所有任务TaskSet,
 	TaskSetManager会根据locality aware 来为Task分配计算资源,监控Task的执行状态(例如重试,慢任务进行推测式执行等):参考补充1
-	  
-	  
+
 二:TaskScheduler与SchedulerBackend
 	1.总体的底层任务调度过程如下:
-		a)TaskSchedulerImpl.submitTasks:主要的作用是讲TaskSet加入到TaskManager中进行管理;
+		a)TaskSchedulerImpl.submitTasks:主要的作用是将TaskSet加入到TaskManager中进行管理;
 		b)SchedulableBuilder.addTaskSetManager:
 			SchedulableBuilder会确定TaskSetManager的调度顺序,
 			然后按照TaskSetManager的locality aware来确定每个Task具体运行在哪个ExecutorBackend中;
 
-	schedulableBuilder.addTaskSetManager(manager, manager.taskSet.properties),参考补充2
+			schedulableBuilder.addTaskSetManager(manager, manager.taskSet.properties),参考补充2
+
 		c)CoarseGrainedSchedulerBackend.reviveOffers:
 			给DriverEndpoint发送ReviveOffers,ReviveOffers本身是一个空的case object对象,
 			只是起到触发底层资源调度的作用,在有Task提交或者计算资源变动的时候会发送ReviveOffers这个消息作为触发器;
 
-	backend.reviveOffers()
-	-->CoarseGrainedSchedulerBackend.reviveOffers():	
-	    driverEndpoint.send(ReviveOffers)
-	-->case object ReviveOffers extends CoarseGrainedClusterMessage
-		d)在DriverEndpoint接受ReviveOffers消息并路由到makeOffers具体的方法中,在makeOffers方法中:首先准备好所有可以用于计算的workOffers(代表了所有可用ExecutorBackend中可以使用的Cores等信息)
-	class DriverEndpoint.receive{
-		case ReviveOffers =>
-        makeOffers()
-        -->
-    private def makeOffers() {
-      // Filter out executors under killing
-      val activeExecutors = executorDataMap.filterKeys(executorIsAlive)
-      val workOffers = activeExecutors.map { case (id, executorData) =>
-        new WorkerOffer(id, executorData.executorHost, executorData.freeCores)
-      }.toSeq
-      launchTasks(scheduler.resourceOffers(workOffers))
-    }
-		e)TaskSchedulerImpl.resourceOffers:为每一个Task具体分配计算资源,输入是ExecutorBackend及其上可以用的Cores,输出TaskDescription的二维数组,在其中确定了每个Task具体运行在哪个ExecutorBackend.其中TaskScheduler参考补充3,TaskDescription参考补充4;
- /**
-   * Called by cluster manager to offer resources on slaves. We respond by asking our active task
-   * sets for tasks in order of priority. We fill each node with tasks in a round-robin manner so
-   * that tasks are balanced across the cluster.
-   */
-  def resourceOffers(offers: Seq[WorkerOffer]): Seq[Seq[TaskDescription]] = synchronized {
-		resourceOffers到底是如何确定Task具体运行在哪个ExecutorBackend红色那个的呢?算法的具体实现如下:
+			backend.reviveOffers()
+			-->CoarseGrainedSchedulerBackend.reviveOffers():
+				driverEndpoint.send(ReviveOffers)
+			-->case object ReviveOffers extends CoarseGrainedClusterMessage
+
+		d)在DriverEndpoint接受ReviveOffers消息并路由到makeOffers具体的方法中,在makeOffers方法中:
+		首先准备好所有可以用于计算的workOffers(代表了所有可用ExecutorBackend中可以使用的Cores等信息)
+
+			class DriverEndpoint.receive{
+				case ReviveOffers =>
+				makeOffers()
+				-->
+			private def makeOffers() {
+			  // Filter out executors under killing
+			  val activeExecutors = executorDataMap.filterKeys(executorIsAlive)
+			  val workOffers = activeExecutors.map { case (id, executorData) =>
+				new WorkerOffer(id, executorData.executorHost, executorData.freeCores)
+			  }.toSeq
+			  launchTasks(scheduler.resourceOffers(workOffers))
+			}
+
+		e)TaskSchedulerImpl.resourceOffers:
+		为每一个Task具体分配计算资源,输入是ExecutorBackend及其上可以用的Cores,输出TaskDescription的二维数组,
+		在其中确定了每个Task具体运行在哪个ExecutorBackend.其中TaskScheduler参考补充3,TaskDescription参考补充4;
+
+		 /**
+		   * Called by cluster manager to offer resources on slaves. We respond by asking our active task
+		   * sets for tasks in order of priority. We fill each node with tasks in a round-robin manner so
+		   * that tasks are balanced across the cluster.
+		   */
+		  def resourceOffers(offers: Seq[WorkerOffer]): Seq[Seq[TaskDescription]] = synchronized {
+
+		resourceOffers到底是如何确定Task具体运行在哪个ExecutorBackend红色那个的呢?
+		算法的具体实现如下:
 		i.通过Random.shuffle方法重新洗牌所有的计算资源以寻求计算的负载均衡;
-		val shuffledOffers = Random.shuffle(offers)
+			val shuffledOffers = Random.shuffle(offers)
 		ii:根据每个ExecutorBackend的cores的个数声明类型为TaskDescription的ArrayBuffer数组;
-		 val tasks = shuffledOffers.map(o => new ArrayBuffer[TaskDescription](o.cores))
+			 val tasks = shuffledOffers.map(o => new ArrayBuffer[TaskDescription](o.cores))
 		iii:如果有新的ExecutorBackend分配给我们的Job,此时会调用executorAdded来获得最新的完成的计算计算资源,
-		 for (taskSet <- sortedTaskSets) {
-			 if (newExecAvail) {
-		    taskSet.executorAdded()
-		  	}
+			 for (taskSet <- sortedTaskSets) {
+				 if (newExecAvail) {
+				taskSet.executorAdded()
+				}
 		iv:通过下述代码最求最高级别的优先级本地性:参考补充5
-    //二维循环:
-    for (taskSet <- sortedTaskSets; maxLocality <- taskSet.myLocalityLevels) {
-      do {
-        launchedTask = resourceOfferSingleTaskSet(
-            taskSet, maxLocality, shuffledOffers, availableCpus, tasks)
-      } while (launchedTask)
-    }
+
+    		//二维循环:
+			for (taskSet <- sortedTaskSets; maxLocality <- taskSet.myLocalityLevels) {
+			  do {
+				launchedTask = resourceOfferSingleTaskSet(
+					taskSet, maxLocality, shuffledOffers, availableCpus, tasks)
+			  } while (launchedTask)
+			}
+
 		resourceOfferSingletaskSet参考:补充6
 		v:通过调用TaskSetManager的resourceOffer最终去顶每个Task具体运行在那个ExecutorBackend的具体的LocalityLevel;
-	for (task <- taskSet.resourceOffer(execId, host, maxLocality)) {
-	-->
-	f):通过launchTasks把任务发送给ExecutorBackend去执行;可联合参考补充8
+
+			for (task <- taskSet.resourceOffer(execId, host, maxLocality)) {
+			-->
+
+		f):通过launchTasks把任务发送给ExecutorBackend去执行;可联合参考补充8
 	
 	
-	补充:1.Task默认的最大重试次数是4次;
-	TaskSchedulerImpl类构造方法中:
-	  def this(sc: SparkContext) = this(sc, sc.conf.getInt("spark.task.maxFailures", 4))
+		补充:1.Task默认的最大重试次数是4次;
+		TaskSchedulerImpl类构造方法中:
+		  def this(sc: SparkContext) = this(sc, sc.conf.getInt("spark.task.maxFailures", 4))
 	  
-	回到CoarseGrainedSchedulerBackend.DriverEndpoint. makeOffers()方法中:
-	launchTasks(scheduler.resourceOffers(workOffers))
+		回到CoarseGrainedSchedulerBackend.DriverEndpoint. makeOffers()方法中:
+			launchTasks(scheduler.resourceOffers(workOffers))
 	
-	2.Spark应用程序目前支持两种调度:FIFO,FAIR,可以通过spark-env.sh中spark-env.sh中spark.scheduler.mode进行具体的设置,默认情况下是FIFO的方式;
-	trait SchedulableBuilder {
-	private[spark] class FIFOSchedulableBuilder
-	private[spark] class FairSchedulableBuilder}
-	TaskSchedulerImpl类:
-	private[spark] class TaskSchedulerImpl(
-		  private val schedulingModeConf = conf.get("spark.scheduler.mode", "FIFO")
-	  
-	3.TaskScheduler中要负责为Task分配计算资源:此时程序已经具备集群中的计算资源了根据计算本地性原则确定Task具体要运行在哪个ExecutorBackend中;
+	2.Spark应用程序目前支持两种调度:FIFO,FAIR,
+	可以通过spark-env.sh中spark-env.sh中spark.scheduler.mode进行具体的设置,
+	默认情况下是FIFO的方式;
+
+		trait SchedulableBuilder {
+		private[spark] class FIFOSchedulableBuilder
+		private[spark] class FairSchedulableBuilder}
+		TaskSchedulerImpl类:
+		private[spark] class TaskSchedulerImpl(
+			  private val schedulingModeConf = conf.get("spark.scheduler.mode", "FIFO")
+
+	3.TaskScheduler中要负责为Task分配计算资源:
+	此时程序已经具备集群中的计算资源了根据计算本地性原则确定Task具体要运行在哪个ExecutorBackend中;
 	
 	4.TaskDescription中已经确定好了Task具体要运行在哪个ExecutorBackend上;
-	/**
-	 * Description of a task that gets passed onto executors to be executed, usually created by
-	 * [[TaskSetManager.resourceOffer]].
-	 */
-	private[spark] class TaskDescription(
-		val taskId: Long,
-		val attemptNumber: Int,
-		val executorId: String,
-		val name: String,
-		val index: Int,    // Index within this task's TaskSet
-		_serializedTask: ByteBuffer)
-	  extends Serializable {
+
+		/**
+		 * Description of a task that gets passed onto executors to be executed, usually created by
+		 * [[TaskSetManager.resourceOffer]].
+		 */
+		private[spark] class TaskDescription(
+			val taskId: Long,
+			val attemptNumber: Int,
+			val executorId: String,
+			val name: String,
+			val index: Int,    // Index within this task's TaskSet
+			_serializedTask: ByteBuffer)
+		  extends Serializable {
+
 	而确定Task具体运行在哪个ExecutorBackend上的算法是有TaskSetManager的resourceOffer方法决定
 	
-	5.数据本地性有限级别从高到底以此为:优先级高低排:PROCESS_LOCAL, NODE_LOCAL, NO_PREF, RACK_LOCAL, ANY,其中NO_PREF是指机器本地性(一台机器可能包括多个node)
-	object TaskLocality extends Enumeration {
-  // Process local is expected to be used ONLY within TaskSetManager for now.
-  val PROCESS_LOCAL, NODE_LOCAL, NO_PREF, RACK_LOCAL, ANY = Value
+	5.数据本地性有限级别从高到底以此为:
+	优先级高低排:PROCESS_LOCAL, NODE_LOCAL, NO_PREF, RACK_LOCAL, ANY,
+	其中NO_PREF是指机器本地性(一台机器可能包括多个node)
+
+		object TaskLocality extends Enumeration {
+	  // Process local is expected to be used ONLY within TaskSetManager for now.
+	  val PROCESS_LOCAL, NODE_LOCAL, NO_PREF, RACK_LOCAL, ANY = Value
+
 	6.每个Task默认采用一个线程进行计算的
 	 if (availableCpus(i) >= CPUS_PER_TASK) {
 	  其中:val CPUS_PER_TASK = conf.getInt("spark.task.cpus", 1)
+
 	7.DAGScheudler是从数据层面考虑preferedLocation的,而TaskScheduler是从具体计算Task角度考虑计算本地性;
 	8.Task进行广播时候的AkkFrameSize大小是128MB;
-	launchTasks(scheduler.resourceOffers(workOffers)){
-	  if (serializedTask.limit >= akkaFrameSize - AkkaUtils.reservedSizeBytes) {
-		-->private val akkaFrameSize = AkkaUtils.maxFrameSizeBytes(conf)
-			-->def maxFrameSizeBytes(conf: SparkConf): Int = {
-			val frameSizeInMB = conf.getInt("spark.akka.frameSize", 128)
-	如果任务大于128Mb-200kb的话,则Task会直接丢弃掉;如果小于128Mb-200kb的话会通过CoarseGrainedExecutorBackend去launchTask到具体ExecutorBackend上;
+
+		launchTasks(scheduler.resourceOffers(workOffers)){
+		  if (serializedTask.limit >= akkaFrameSize - AkkaUtils.reservedSizeBytes) {
+			-->private val akkaFrameSize = AkkaUtils.maxFrameSizeBytes(conf)
+				-->def maxFrameSizeBytes(conf: SparkConf): Int = {
+				val frameSizeInMB = conf.getInt("spark.akka.frameSize", 128)
+
+	如果任务大于128Mb-200kb的话,则Task会直接丢弃掉;
+	如果小于128Mb-200kb的话会通过CoarseGrainedExecutorBackend去launchTask到具体ExecutorBackend上;
+
 	 if (serializedTask.limit >= akkaFrameSize - AkkaUtils.reservedSizeBytes) {
 	  taskSetMgr.abort(msg)
 	 } else {

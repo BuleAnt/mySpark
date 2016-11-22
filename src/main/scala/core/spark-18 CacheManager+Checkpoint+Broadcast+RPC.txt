@@ -6,59 +6,76 @@ CacheManager源码分析
 一:CacheManager重大价值
 	1.CacheManager分析:CacheManager管理的是缓存,而缓存可以是基于内存的缓存,也可以是基于磁盘的缓存
 	2.CacheManager需要通过BlockManager来操作数据
-	3.每当Task运行的时候会调用RDD的compute方法进行计算,而computoe方法会调用iterator方法;
-  /**
-   * Internal method to this RDD; will read from cache if applicable, or otherwise compute it.
-   * This should ''not'' be called by users directly, but is available for implementors of custom
-   * subclasses of RDD.
-   */
-  final def iterator(split: Partition, context: TaskContext): Iterator[T] = {
-    if (storageLevel != StorageLevel.NONE) {
-      SparkEnv.get.cacheManager.getOrCompute(this, split, context, storageLevel)
-    } else {
-      computeOrReadCheckpoint(split, context)
-    }
-  }
+	3.每当Task运行的时候会调用RDD的compute方法进行计算,而compute方法会调用iterator方法;
+
+	  /**
+	   * Internal method to this RDD; will read from cache if applicable, or otherwise compute it.
+	   * This should ''not'' be called by users directly, but is available for implementors of custom
+	   * subclasses of RDD.
+	   */
+	  final def iterator(split: Partition, context: TaskContext): Iterator[T] = {
+		if (storageLevel != StorageLevel.NONE) {
+		  SparkEnv.get.cacheManager.getOrCompute(this, split, context, storageLevel)
+		} else {
+		  computeOrReadCheckpoint(split, context)
+		}
+	  }
 
 二:CacheManager源码详解
-	1.Cache在工作的时候会最大化的保留数据,但是数据不一定绝对完整,因为当前的计算如果需要内存空间的话,那么Cache在内存中的数据必须让出空间,此时如果在RDD持久化的时候同时指定了可以把数据放在Disk上,那么部分Cache的数据就可以从内存转入磁盘,否则的话,数据就会丢失!!!
-	def getOrCompute[T](..){
+	1.Cache在工作的时候会最大化的保留数据,但是数据不一定绝对完整,
+	因为当前的计算如果需要内存空间的话,那么Cache在内存中的数据必须让出空间,
+	此时如果在RDD持久化的时候同时指定了可以把数据放在Disk上,那么部分Cache的数据就可以从内存转入磁盘,
+	否则的话,数据就会丢失!!!
+		def getOrCompute[T](..){
+
 	2.具体CacheManager在获得缓存数据的时候会通过BlockManager来抓到数据
-	blockManager.get(key) match {
-	-->def get(blockId: BlockId): Option[BlockResult] = {
-    val local = getLocal(blockId)
-    if (local.isDefined) {
-      logInfo(s"Found block $blockId locally")
-      return local
-    }
-    val remote = getRemote(blockId)
-    if (remote.isDefined) {
-      logInfo(s"Found block $blockId remotely")
-      return remote
-    }
-    None
-  }
+
+		blockManager.get(key) match {
+		-->def get(blockId: BlockId): Option[BlockResult] = {
+		val local = getLocal(blockId)
+		if (local.isDefined) {
+		  logInfo(s"Found block $blockId locally")
+		  return local
+		}
+		val remote = getRemote(blockId)
+		if (remote.isDefined) {
+		  logInfo(s"Found block $blockId remotely")
+		  return remote
+		}
+		None
+	  }
+
 	3.如果CacheManager没有通过BlockManager获得缓存内容的话,此时会通过RDD的如下方法来获得数据:
-	val 
 	上述方法首先会查看当前的RDD是否进行Checkpoint,如果进行了话就直接读取Checkpoint的数据,否则的话就必须进行计算
 	
 Checkpoint
 =======================================================
-1.Spark在生产环境下:Tranformations的RDD非常多(1万RDD的Job)或具体Tranformation产生的RDD本身计算特别复制和耗时(1小时)-->此时考虑对计算持久化
-2.Spark擅长迭代(基于Job复用),持久化对计算结果复用极大提高效率
-3.persist数据到内存快速但不可靠,磁盘也不完全可靠(磁盘损坏,被清除)
-4.Checkpoint持久数据可靠性:Checkpoint指定local/HDFS存放和副本)
-5.安全性,可复用(存放HDFS)
-6.Checkpoint对RDD计算链条特别需要持久化的环节(反复使用的RDD),基于HDFS持久化
+	1.Spark在生产环境下:Transformations的RDD非常多(1万RDD的Job)
+	或具体Transformation产生的RDD本身计算特别复制和耗时(1小时)-->此时考虑对计算持久化
+	2.Spark擅长迭代(基于Job复用),持久化对计算结果复用极大提高效率
+	3.persist数据到内存快速但不可靠,磁盘也不完全可靠(磁盘损坏,被清除)
+	4.Checkpoint持久数据可靠性:Checkpoint指定local/HDFS存放和副本)
+	5.安全性,可复用(存放HDFS)
+	6.Checkpoint对RDD计算链条特别需要持久化的环节(反复使用的RDD),基于HDFS持久化
 
 原理机制:
-1.调用SparkContext.setCheckpointDir指定CheckpointDir(如:HDFS://,提高效率,使用多个目录)
-2.进行RDD的checkpoint时,所有依赖的RDD都会从计算链条中清空
-3.作为最佳实践,一般在进行checkpoint方法调用前通常都要进行persist来把当前RDD的数据持久化到内存或者磁盘上,这是因为checkpoint是Laze级别,必须有Job的执行且在Job执行完成后才会从后往前回溯哪个RDD进行checkpoint标记,然后对该标记了要进行Checkpoint的RDD新启动一个Job执行具体的Checkpoint的过程
-4.Checkpoint改变RDD的Lineage
-5.当调用checkpoint方法对RDD进行checkpoint时,框架自动生成RDDCheckpointData,当RDD上运行一个Job后就会立即触发RDD.checkpoint,在内部调用RDDCheckpointData.docheckpoint,在生产环境下会调用ReliableRDDCheckpointData的doCheckpoint-->ReliableCheckpointRDD.writeRDDToCheckpointDirectory-->runJob执行当前RDD中数据写入Checkpoint目录,产生ReliableCheckpointRDD实例
-概括:
-SparkContext.setCheckpointDir设定目录-->Job执行,RDD.checkpoint-->RDDCheckpointData.checkpoint-->RDDCheckpointData.docheckpoint-->ReliableCheckpointRDD.writeRDDToCheckpointDirector-->runJob执行当前RDD数据写到Checkpoint目录中,并产生ReliableCheckpoint实例
+	1.调用SparkContext.setCheckpointDir指定CheckpointDir(如:HDFS://,提高效率,使用多个目录)
+	2.进行RDD的checkpoint时,所有依赖的RDD都会从计算链条中清空
+	3.作为最佳实践,一般在进行checkpoint方法调用前通常都要进行persist来把当前RDD的数据持久化到内存或者磁盘上,
+		这是因为checkpoint是Lazy级别,必须有Job的执行且在Job执行完成后才会从后往前回溯哪个RDD进行checkpoint标记,
+		然后对该标记了要进行Checkpoint的RDD新启动一个Job执行具体的Checkpoint的过程
+	4.Checkpoint改变RDD的Lineage
+	5.当调用checkpoint方法对RDD进行checkpoint时,框架自动生成RDDCheckpointData,
+	当RDD上运行一个Job后就会立即触发RDD.checkpoint,在内部调用RDDCheckpointData.docheckpoint,
+		在生产环境下会调用ReliableRDDCheckpointData的doCheckpoint
+		在生产环境下会调用ReliableRDDCheckpointData的doCheckpoint
+		-->ReliableCheckpointRDD.writeRDDToCheckpointDirectory
+		-->runJob执行当前RDD中数据写入Checkpoint目录,产生ReliableCheckpointRDD实例
+执行调用概括:
+	SparkContext.setCheckpointDir设定目录-->Job执行,RDD.checkpoint
+	-->RDDCheckpointData.checkpoint-->RDDCheckpointData.docheckpoint
+	-->ReliableCheckpointRDD.writeRDDToCheckpointDirector
+	-->runJob执行当前RDD数据写到Checkpoint目录中,并产生ReliableCheckpoint实例
 
 Broadcast解析:
 =================================================
@@ -99,17 +116,20 @@ Broadcast解析:
 Spark RPC
 =================================
 Spark 1.6 RPC
-1.Spark1.6推出以RpcEnv,RPCEndpoint,RPCEndpointRef为核心的新型架构下的RPC通信方式,就目前而言底层依旧是Akka
+1.Spark1.6推出以RpcEnv,RPCEndpoint,RPCEndpointRef为核心的新型架构下的RPC通信方式,就目前而言底层是Netty
 2.Akka是基于Actor的分布式消息通信,而Spark 1.6中封装了Akka,提供更高层的Rpc实现,目的是一处对Akka的依赖,为扩展和自动已Rpc打下基础
 
 RPCEnv解析
-1.RpcEnv是Rpc的环境(相当于Akka中的ActorSystem),所有的RpcEndpoint都需要注册到RpcEnv实例对象中(注册的时候会指定注册的名称,这样客户端就可以通过名称查询到RPCEndpoint的RPCEndpointRef引用,进而进行通信),RPCEndpoint接收到消息后会调用receive方法进行处理,
-RpcEndpointRef发消息-->RpcEnv查询注册表路由-->RpcEndpoint
-RpcCallContext:处理Rpc异常
-2.RpcEndpoint如果接收到需要reply的消息的话,就会交给自己的receiveAndReply来处理(回复时候是通过RpcCallContext中的reply方法来回复发送者),如果不需要reply的化就交个receive方法来处理
-3.RpcEnvFactory是负责创建RpcEnv的,通过create方法创建RpcEnv实例对象,默认是Netty:
-4.RpcEndpoint生命周期:构造Constructor-->启动onStart-->消息接收receive-->停止onStop
-RpcEndpointRef代理模式
+	1.RpcEnv是Rpc的环境(相当于Akka中的ActorSystem),所有的RpcEndpoint都需要注册到RpcEnv实例对象中
+		(注册的时候会指定注册的名称,这样客户端就可以通过名称查询到RPCEndpoint的RPCEndpointRef引用,进而进行通信),
+		RPCEndpoint接收到消息后会调用receive方法进行处理,
+		RpcEndpointRef发消息-->RpcEnv查询注册表路由-->RpcEndpoint
+		RpcCallContext:处理Rpc异常
+	2.RpcEndpoint如果接收到需要reply的消息的话,就会交给自己的receiveAndReply来处理
+		(回复时候是通过RpcCallContext中的reply方法来回复发送者),如果不需要reply的化就交个receive方法来处理
+	3.RpcEnvFactory是负责创建RpcEnv的,通过create方法创建RpcEnv实例对象,默认是Netty:
+	4.RpcEndpoint生命周期:构造Constructor-->启动onStart-->消息接收receive-->停止onStop
+	RpcEndpointRef代理模式
 
 其他参考:Client，Master和Worker 通信源码解析(1.0.0版本)
 	http://blog.csdn.net/anzhsoft/article/details/30802603

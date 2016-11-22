@@ -2,44 +2,63 @@ Task执行原理流程图
 Task执行内幕源码解密
 Task执行结果在Driver上处理解密
 
-Executor会通过TaskRunner在ThreadPool来运行具体的Task,TaskRUnner内部会做一些准备工作,例如反序列化Task,然后通过网络来获取需要的文件,Jar都能
--->运行Thread的run方法,导致Task的runTask被调用来小hi宁具体的业务逻辑处理
+Executor会通过TaskRunner在ThreadPool来运行具体的Task,
+TaskRunner内部会做一些准备工作,例如反序列化Task,然后通过网络来获取需要的文件,Jar包
+-->运行Thread的run方法,导致Task的runTask被调用来完成具体的业务逻辑处理
+==>在Task的runTask内部会调用RDD的iterator()方法,
+	该方法就是我们针对当前Task所对用的Partition进行计算的关键之所在,
+	在具体的处理内容会迭代Partition的元素并交给我们自定义的function进行处理,
+	runTask有两种实现:ShuffleMapTask和ResultTask
 
-==>在Task的runTask内部会调用RDD的iterator()方法,该方法就是我们针对当前Task所对用的Partition进行计算的关键之所在,在具体的处理内容会迭代Parititon的元素并交给我们自定义的function进行处理,runTask有两种实现:ShuffleMapTask和ResaultTask
-
--->ShuffleMapTask.runTask()在计算具体的Partition之后,实际上会通过ShuffleManager获得的ShuffleWriter把当前Task计算的结果根据具体的ShuffleManager实现来写入到具体的文件.操作完成后会把MapStatus发送给DAGScheduler-->(把MapStatus汇报给MapOutputTracker)
--->Driver[DAGScheduler(MapOutputTracker]
--->(MapOutputTracker会把ShuffleMapTask执行结果交给ResaultTask)-->ResaultTask:根据前面Stage的执行结果进行Shuffle产生整个Job最后的结果
+	-->ShuffleMapTask.runTask()在计算具体的Partition之后,
+	实际上会通过ShuffleManager获得的ShuffleWriter把当前Task计算的结果根据具体的ShuffleManager实现来写入到具体的文件.
+	操作完成后会把MapStatus发送给DAGScheduler-->(把MapStatus汇报给MapOutputTracker)
+	-->Driver[DAGScheduler(MapOutputTracker]
+	-->(MapOutputTracker会把ShuffleMapTask执行结果交给ResaultTask)
+	-->ResaultTask:根据前面Stage的执行结果进行Shuffle产生整个Job最后的结果
 
 
 一:Task执行结果处理及原理流程图和源码解密:
-	1.当Driver中的(Standalone模式)CoarseGrainedSchedulerBackend给CoarseGrainedExecutorBackend发送LaunchTask后,CoarseGrainedExecutorBackend收到消息,首先会反序列化TaskDescription:
-	CoarseGrainedExecutorBackend.receive(){
-    case LaunchTask(data) =>
-        val taskDesc = ser.deserialize[TaskDescription](data.value)
+	1.当Driver中的(Standalone模式)CoarseGrainedSchedulerBackend给CoarseGrainedExecutorBackend发送LaunchTask后,
+	CoarseGrainedExecutorBackend收到消息,首先会反序列化TaskDescription:
+
+		CoarseGrainedExecutorBackend.receive(){
+		case LaunchTask(data) =>
+			val taskDesc = ser.deserialize[TaskDescription](data.value)
+
 	2.Executor会通过launchTask来执行Task;
-        executor.launchTask(this, taskId = taskDesc.taskId, attemptNumber = taskDesc.attemptNumber,
-          taskDesc.name, taskDesc.serializedTask)
-      }
+
+		executor.launchTask(this, taskId = taskDesc.taskId, attemptNumber = taskDesc.attemptNumber,
+		  taskDesc.name, taskDesc.serializedTask)
+	  }
 		-->def launchTask(
 		  context: ExecutorBackend,
 		  taskId: Long,
 		  attemptNumber: Int,
 		  taskName: String,
 		  serializedTask: ByteBuffer): Unit = {
-	3.Executor会通过TaskRunner在ThreadPool来运行具体的Task,在TaskRunner的run方法TaskRuner中首先会通过调用statusUpdata给Driver发信息汇报自己点状态说明自己是RUNNING状态
-    Executor.launchTask(){
-    val tr = new TaskRunner(context, taskId = taskId, attemptNumber = attemptNumber, taskName,
-      serializedTask)
-	-->class TaskRunner.run(){
-		 execBackend.statusUpdate(taskId, TaskState.RUNNING, EMPTY_BYTE_BUFFER)
-	4.TaskRunner内部会做一些准备工作:例如反序列化Task的依赖:
-    val (taskFiles, taskJars, taskBytes) = Task.deserializeWithDependencies(serializedTask)
-    然后是通过网络下载这些依赖
-    updateDependencies(taskFiles, taskJars)
+
+	3.Executor会通过TaskRunner在ThreadPool来运行具体的Task,
+	在TaskRunner的run方法TaskRuner中首先会通过调用statusUpdata给Driver发信息汇报自己点状态说明自己是RUNNING状态
+
+		Executor.launchTask(){
+		val tr = new TaskRunner(context, taskId = taskId, attemptNumber = attemptNumber, taskName,
+		  serializedTask)
+		-->class TaskRunner.run(){
+			 execBackend.statusUpdate(taskId, TaskState.RUNNING, EMPTY_BYTE_BUFFER)
+
+	4.TaskRunner内部会做一些准备工作:
+	例如反序列化Task的依赖,然后是通过网络下载这些依赖
+
+    	val (taskFiles, taskJars, taskBytes) = Task.deserializeWithDependencies(serializedTask)
+    	updateDependencies(taskFiles, taskJars)
+
 	5.然后是反序列化Task本身
-    task = ser.deserialize[Task[Any]](taskBytes, Thread.currentThread.getContextClassLoader)
+
+		task = ser.deserialize[Task[Any]](taskBytes, Thread.currentThread.getContextClassLoader)
+
 	6.调用反序列化后的Task.run方法来执行任务并获得执行结果
+
          val (value, accumUpdates) = try {
           val res = task.run(
             taskAttemptId = taskId,
@@ -47,67 +66,85 @@ Executor会通过TaskRunner在ThreadPool来运行具体的Task,TaskRUnner内部�
             metricsSystem = env.metricsSystem)
           threwException = false
           res
+
 	其中Task.run方法调用时候会导致Task的抽象方法runTask()调用;
 	对于ShuffleMapTask,首先要对RDD以及其依赖关系进行反序列化:
 	
-	Task.run(){
+		Task.run(){
+			.....
+			(runTask(context), context.collectAccumulators())
+		}
+		-->Task.runTask(context: TaskContext): T
+
+	在Task的runTask内部会调用RDD的iterator()方法,
+	该方法就是我们针对当前Task所定影的partition进行计算的关键之所在,
+	在处理的内部会迭代Partition的元素并交给我们自定义的function进行处理!
+	例如:
+
+		ShuffleMapTask.runTask(){
+		val (rdd, dep) = ser.deserialize[(RDD[_], ShuffleDependency[_, _, _])](
 		.....
-		(runTask(context), context.collectAccumulators())
-	}
-	-->Task.runTask(context: TaskContext): T
-	在Task的runTask内部会调用RDD的iterator()方法,该方法就是我们针对当前Task所定影的partition进行计算的关键之所在,在处理的内部会迭代Partition的元素并交给我们自定义的function进行处理!
-	例如:ShuffleMapTask.runTask(){
-	val (rdd, dep) = ser.deserialize[(RDD[_], ShuffleDependency[_, _, _])](
-	.....
-	writer.write(rdd.iterator(partition, context).asInstanceOf[Iterator[_ <: Product2[Any, Any]]])
-	
+		writer.write(rdd.iterator(partition, context).asInstanceOf[Iterator[_ <: Product2[Any, Any]]])
+
 	对于Shuffle,首先要对RDD以及其依赖关心进行反序列化,同上代码
 	最终计算会调用RDD的compute方法:
-	-->RDD.iterator(){
-		computeOrReadCheckpoint(split, context)
-		-->RDD.compute(split: Partition, context: TaskContext)
-		-->TaskContextImpl类
+
+		-->RDD.iterator(){
+			computeOrReadCheckpoint(split, context)
+			-->RDD.compute(split: Partition, context: TaskContext)
+			-->TaskContextImpl类
+
 	具体计算的时候有具体的RDD,例如MapPartitionRDD的compute方法:
-		compute(split: Partition, context: TaskContext): Iterator[U] =
-    f(context, split.index, firstParent[T].iterator(split, context))
+
+			compute(split: Partition, context: TaskContext): Iterator[U] =
+		f(context, split.index, firstParent[T].iterator(split, context))
+
     其中的f就是我们在当前的Stage中计算具体Partition的业务逻辑代码;
     
     对于ResaultTask.runTask():代码
+
     7.把执行结果序列:
-    val serializedResult: ByteBuffer = {...
     并根据大小判断不同的结果传回给Driver的方式
-     if (maxResultSize > 0 && resultSize > maxResultSize) {...
-     }else if (resultSize >= akkaFrameSize - AkkaUtils.reservedSizeBytes) {...
-     }else {..
-     }
-     execBackend.statusUpdate(taskId, TaskState.FINISHED, serializedResult)
-	8.CoarseGrainedExecutorBackend给DriverEndpoint发送StatusUpdate来传输执行结果,DriverEndpoint会把执行结果传递给TaskSchedulerImpl处理,然后交给TaskResultGetter内部通过线程去分别处理Task执行成功和失败时候的不同情况,然后告诉DAGScheduler任务处理结束的状况
-     -->CoarseGrainedExecutorBackend.statusUpdate(){
-	 case Some(driverRef) => driverRef.send(msg)
-	 -->CoarseGrainedSchedulerBackend.DriverEndpoint.receive(){
-      case StatusUpdate(executorId, taskId, state, data) =>
-        scheduler.statusUpdate(taskId, state, data.value)
-     	-->TaskSchedulerImpl.statusUpdate()
+
+		val serializedResult: ByteBuffer = {...
+		 if (maxResultSize > 0 && resultSize > maxResultSize) {...
+		 }else if (resultSize >= akkaFrameSize - AkkaUtils.reservedSizeBytes) {...
+		 }else {..
+		 }
+		 execBackend.statusUpdate(taskId, TaskState.FINISHED, serializedResult)
+
+	8.CoarseGrainedExecutorBackend给DriverEndpoint发送StatusUpdate来传输执行结果,
+	DriverEndpoint会把执行结果传递给TaskSchedulerImpl处理,
+	然后交给TaskResultGetter内部通过线程去分别处理Task执行成功和失败时候的不同情况,
+	然后告诉DAGScheduler任务处理结束的状况
+
+		 -->CoarseGrainedExecutorBackend.statusUpdate(){
+		 case Some(driverRef) => driverRef.send(msg)
+		 -->CoarseGrainedSchedulerBackend.DriverEndpoint.receive(){
+		  case StatusUpdate(executorId, taskId, state, data) =>
+			scheduler.statusUpdate(taskId, state, data.value)
+			-->TaskSchedulerImpl.statusUpdate()
+
 	2.运行Thread的run方法,导致Task的runTask被调用来执行具体的业务逻辑处理
 	
 	
 	补充说明:
 	1.在执行具体的Task的业务逻辑前会进行三次反序列化:分别是
-	a)TaskDescription的反序列化
-	b)反序列化Task的依赖
-	b)Task的反序列化
-	c)RDD的反序列化
+		a)TaskDescription的反序列化
+		b)反序列化Task的依赖
+		b)Task的反序列化
+		c)RDD的反序列化
 	2.在Spark1.6中AkkFrameSize是128MB,所以可以广播非常大的任务,而任务的执行结果可以最大达到1Gb;
-	val serializedResult: ByteBuffer = {
-		if (maxResultSize > 0 && resultSize > maxResultSize) {
-		 // Limit of bytes for total size of results (default is 1GB)
-	 	 -->private val maxResultSize = Utils.getMaxResultSize(conf)
+
+		val serializedResult: ByteBuffer = {
+			if (maxResultSize > 0 && resultSize > maxResultSize) {
+			 // Limit of bytes for total size of results (default is 1GB)
+			 -->private val maxResultSize = Utils.getMaxResultSize(conf)
 
 其他参考:Task向Executor提交的源码解析
 	http://blog.csdn.net/anzhsoft/article/details/40238111
 
 ---------------------------------------------------------------------------------------------------
-
 一：Spark集群部署
 二：Job提交解密
 三：Job生成和接受
@@ -139,64 +176,38 @@ Master,Worker,Executor,Driver,CoarseGraindExecutorbacked
 
 二　:Job提交过程源码解密
 
-１，一个非常重要的技巧通过在Spark-Shell中运行一个Job来了解Job提交的过程，然后再次用源码验证。
-	这个过程：　
-	sc.textFIle("src/main/resources/text.txt").flatMap(_.split(" ")).map(word=>(word,1)).reduceByKey(_+_).saveAsTextFile("target/out/wc.out")
-２，在Spark中所有的Action都会触发一个至少一个Job，在上述代码中通过saveAsTextFile来触发Job的
-３.SparkContext在实例化的时候会构造SparkDeploySchedulerBackend(deploy:配置，部署），DAGScheduler,TaskShedulerImpl(Impl:接口），MapOutputTrackerMaster等对象：
-	（1）SparkDeploySchedulerBackend负责集群计算资源的管理和调度。
-	（2）DAGScheduler ： 负责高层调度（例如： Job中stage的划分，数据本地性等内容）
-	（3）TaskSchedulerImpl : 负责具体stage内部的底层调度（例如： 每个Task的调度 ，Task容错等等）
-	（4）MapOutputTrackerMaster： 负责shuffle中数据的输出和读取的管理。
-补充说明的是：
-	Spark默认程序是排队的，Spark默认的情况下由于集群中一般都只有一个Application在运行，所有Master分配计算资源策略就没有那么明显啦）
+	１，一个非常重要的技巧通过在Spark-Shell中运行一个Job来了解Job提交的过程，然后再次用源码验证。
+		这个过程：　
+			sc.textFIle("src/main/resources/text.txt").flatMap(_.split(" "))
+			.map(word=>(word,1)).reduceByKey(_+_)
+			.saveAsTextFile("target/out/wc.out")
 
-4，TaskSchedulerImpl内部的调度：
+	２，在Spark中所有的Action都会触发一个至少一个Job，在上述代码中通过saveAsTextFile来触发Job的
+	３.SparkContext在实例化的时候会构造SparkDeploySchedulerBackend(deploy:配置，部署），
+		DAGScheduler,TaskShedulerImpl(Impl:接口），MapOutputTrackerMaster等对象：
+		（1）SparkDeploySchedulerBackend负责集群计算资源的管理和调度。
+		（2）DAGScheduler ： 负责高层调度（例如： Job中stage的划分，数据本地性等内容）
+		（3）TaskSchedulerImpl : 负责具体stage内部的底层调度（例如： 每个Task的调度 ，Task容错等等）
+		（4）MapOutputTrackerMaster： 负责shuffle中数据的输出和读取的管理。
+		补充说明的是：
+		Spark默认程序是排队的，Spark默认的情况下由于集群中一般都只有一个Application在运行，
+		所以Master分配计算资源策略就没有那么明显啦
+	4，TaskSchedulerImpl内部的调度：
 
 三：Task的运行解密：
-１，Task运行在Executor中，而Executor又是位于CoarseGrainedExecutorBackend中的且CoarseGrainedExecutorBackend和Executor是一一对应的：
+１，Task运行在Executor中，而Executor又是位于CoarseGrainedExecutorBackend中的,
+	且CoarseGrainedExecutorBackend和Executor是一一对应的
+２，单CoarseGrainedExecutorBackend接受到TaskSetManager发过来的LaunchTask的消息后,
+	会反序列化TaskDescription，然后使用CoarseGrainedExecutorBackend中唯一的Executor来执行任务
 
-２，单CoarseGrainedExecutorBackend接受到TaskSetManager发过来的LaunchTask的消息后会反序列化TaskDescription，然后使用CoarseGrainedExecutorBackend中唯一的Executor来执行任务
-
-	case LaunchTask(data) =>
-	if (executor == null) {
-	logError(“Received LaunchTask command but executor was null”)
-	System.exit(1)
-	} else {
-	val taskDesc = ser.deserializeTaskDescription
-	logInfo(“Got assigned task ” + taskDesc.taskId)
-	executor.launchTask(this, taskId = taskDesc.taskId, attemptNumber = taskDesc.attemptNumber,
-	taskDesc.name, taskDesc.serializedTask)
-	}
-发消息要么是case Class或者case object（是唯一的）每次生成类的事例
-
-一： TaskSheduler原理解密：
-
-1，DAGScheduler 在提交 TaskSet 给底层调度器TaskSheduler的时候是面向接口TaskSheduler的，这符合面向对象中依赖抽象而不是依赖具体的原则，带来了底层资源调度器的可抽拨性，导致Spark可以运行众多的资源调度器模式上，例如：standalone,Yarn,Mesos,Local.Ec2,其他自定义的资源调度器；在standalone的模式下我们聚焦于TaskShedulerImpl;
-
-2,在SparkContext实例化的时候通过createTaskScheduler来创建TaskSchedulerImpl和SparkDeployShedulerBackend
-
-case SPARK_REGEX(sparkUrl) =>
-val scheduler = new TaskSchedulerImpl(sc)
-val masterUrls = sparkUrl.split(“,”).map(“spark://” + _)
-val backend = new SparkDeploySchedulerBackend(scheduler, sc, masterUrls)
-scheduler.initialize(backend)
-(backend, scheduler)
-
-在TaskShedulerImpl的initialize（初始化）方法中把SparkDeploySchedulerBackend传进来从而赋值为TaskShedulerImpl的backend;在TaskShedulerImpl调用start方法的时候会调用backend.start方法，在start方法中最终注册应用程序
-
-3，TaskSheduler的核心任务是任务提交TaskSet到集群运算并汇报结构
-a)为TaskSet创建和维护一个TaskSetManager并追踪任务本地性以及
-错误信息
-b)遇到Straggle（迷路）任务会放到其它节点上重试
-c)向DAGScheduler汇报执行情况，包括在shuffle输出lost的时候报告fetch faild 错误等信息。
-
-4，TaskSheduler内部握有SchedulerBackend，从standalone模式来讲具体实现是SparkDeploySchedulerBackend;
-
-5,SparkDeploySchedulerBackend 在启动的时候构造了AppClient实例并在该实例实例化的时候启动了ClientEndpoint(endpoint 终点)这个消息循环体，ClientEndpoint在启动的时候会向Master注册当前程序；而SparkDeploySchedulerBackend的父类CoarserGrainedShedulerBackend在start的时候会实例化类型为DriverEndpoint（这就是我们程序运行的时候经典对象Driver）的消息循环体，SparkDeployShedulerBackend专门负责收集worker上的资源信息，当ExecutorBackend启动的时候会发送RegisteredExecutor信息向DriverEndpoint注册，此时SparkDeploySchedulerBackend就掌握了当前应用程序拥有的计算资源，TaskScheduler就是通过SparkDeploySchedulerBackend拥有计算资源来运行具体的Task；
-
-6，SparkContext，DAGScheduler,TaskSchedulerImpl,SparkDemploySchedulerBackend在应用程序启动的时候只实例化一次，应用程序存在期间始终存在这些对象。
-
-Final Generalize： 在SparkContext实例化的时候调用createTaskSheduler来创建TaskSchedulerImpl和SparkDeploySchedulerBackend，同时在SparkContext实例化的时候会调用SparkDeploySchedulerBackend的start，在start方法中调用SparkDeploySchedulerBackend的start，在该start方法中创建APPClient对象，并调用APPClient的start方法，在该start的方法中会创建ClientEndpoint，在创建ClientEndpoint会传入Command来指定具体为当前应用程序启动的Executor进程的入口类的名称为CoarseGrainedExecutorBackend,然后ClientEndpoint启动并通过tryRegisterMaster来注册当前的应用程序到Master中，Master接收到注册信息后如何可以运行程序，则会为改程序生产JobID并通过Scheduler来分配计算资源，具体计算资源的分配是通过应用程序的运行方式，Memory,cores等配置信息来决定的，最后Master发送指令给Worker，Worker中为当前应用程序分配计算资源时会首先分配ExecutorRunner，ExecutorRunner内部通过Thread的方式构建ProcessBuilder来启动另外一个JVM，这个JVM进程启动的时候加载的main方法所在的类的名称为CoarseGrainedExecutorBackend的类，此时JVM通过ProcessBuilder启动的时候获得了CoarseGrainedExecutorBackend,本身这个消息循环体CoarseGrainedExecutorBackend在实例化的时候回调Onstart向DriverEndpoint发送RegisterExecutor来注册当前CoarseGrainedExecutorBackend，此时DriverEndpoint收到该注册信息并保存在了SparkDeploySchedulerBackend实例的内存数据结构中，这样Driver就获得了计算资源。
-
-这里写图片描述
+		case LaunchTask(data) =>
+		if (executor == null) {
+		logError(“Received LaunchTask command but executor was null”)
+		System.exit(1)
+		} else {
+		val taskDesc = ser.deserializeTaskDescription
+		logInfo(“Got assigned task ” + taskDesc.taskId)
+		executor.launchTask(this, taskId = taskDesc.taskId, attemptNumber = taskDesc.attemptNumber,
+		taskDesc.name, taskDesc.serializedTask)
+		}
+	发消息要么是case Class或者case object（是唯一的）每次生成类的事例

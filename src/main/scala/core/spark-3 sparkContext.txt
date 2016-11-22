@@ -1,0 +1,154 @@
+Spark内核分析
+	1、编程模型
+    2、DAG Scheduler
+    3、Task Scheduler
+    4、RDD、SparkContext源码解析
+==================================
+1.编程模型
+打开ide工具,启动hadoop,启动spark
+	spark有一个driver program包含main函数,一个map,一系列的executor;
+	main方法中有一个spark上下文SparkContext
+		val rdd = sc.textFile("/").flatMap(_.split(" ")).map(_ =>(_,1)).reduceByKey(_ + _)
+		rdd.collect
+	以上代码将在executor中执行,
+	一个Spark program的第一件事情就是创建SparkContext对象,
+	它将告诉Spark如何获取一个集群,创建SparkContext必须先创建SparkConf对象,它包含一些关于app的信息
+		val conf = new SparkConf().setAppName(appName).setMaster(master)
+		new SparkContext(conf)
+		the appName参数是app在cluster UI中显示的名称,
+		master可以是 Spark, Mesos or YARN cluster URL,或者local运行本地模式,
+		当把app运行在cluster上时,你不需要在程序中编写master的代码,而是使用spark-submit来加载app,
+		然而,对于本地测试,可以使用"local"来运行Spark程序
+
+DAG Scheduler
+--------------------------------
+sc.textFile("/").flatMap(_.split(" ")).map(_ =>(_,1)).reduceByKey(_ + _).collect
+1. RDD Object
+	rdd.join(rdd2).groupBy(...).filter(...)-->build operator DAG
+	在RDD Object阶段,构建一个有方向的rdd图,逆向的,按照依赖关系,构建一个DAG图,然后对DAG图进行调度,
+	每一个-->表示一个操作比如如下简略图:
+	(rdd1 join rdd2)-->(groupBy)-->rdd3-->(filter)-->rdd4
+		rdd1-->rdd3-->rdd4
+		rdd2-->rdd3-->rdd4
+2. DAG Scheduler
+	将RDD的DAG图进行调度即为DAG Scheduler,这里分为很多阶段Stage
+	Stage:
+		例如RDD的DAG图中,
+		单个rdd1-->rdd3和rdd2-->rdd3叫做一个阶段,rdd3-->rdd4一个阶段,
+		也就是join是一个Stage,groupBy是一个Stage,filter是一个Stage
+	Task概念:
+		在rdd1-->rdd3阶段,会有很多个task,每个RDD有很多分片split,
+		这些分片将分别转换到rdd3的各个split中,这个过程类似于map-reduce的shuffle过程,
+		这样一个split经过转换发送到下一个rdd的split,每一个split的任务叫做一个task,
+		如此这将DAG图划分成一系列的Task,Task是DAG最小单元
+	Stage:
+		在发生shuffle的时候,讲被划分为两个阶段,
+		上一个rdd的分片形成下一个rdd对应的片为一个Stage,
+		下一个rdd对上一个rdd发送过来的分片进行groupBy合并转换是另一个Stage,
+		然后对整体进行filter的过程又是一个Stage.
+4. Task Scheduler
+	Task Scheduler是对各个阶段中的task进行调度,每个阶段的任务称为TaskSet,
+	Task Scheduler会加载每个Task通过cluster manager
+5. Worker
+	最后Task将会被放在Worker中的通过Threads的Executor进行execute tasks,存储blocks.
+
+容错:
+	如果某个任务运行失败,在第4步中,通过Task Scheduler进行重试失败的
+	rdd.cache
+	rdd.doCheckpoint()
+	sc.setCheckpointDir("/...")
+
+SparkContext内幕
+SParkContext源码解密
+=================================================
+Spark程序的SparkContext角度解密
+	1.Spark程序在运行的时候分为Driver和Executors两部分,
+	2.Spark的程序编写是基于SparkContext的,具体来说包含两方面:
+		a)Spark编程的核心基础---RDD,是有SparkContext来最初创建(第一个RDD一定是有SparkContext来创建)
+		b)Spark程序的调度优化也是基于SparkContext
+	3.Spark程序的注册时通过SparkContext实例化时候,产生的对象完成的其实是SchedulerBackend来注册程序)
+		Spark程序运行的时候要通过Cluster Manager获得具体的计算资源,
+		计算资源的获取也是通过SparkContext产生的对象来生成的(其实是SchedulerBackend来获取计算资源的)
+	5.SparkContext崩溃或者结束的时候整个Spark程序结束
+	总结:
+	SparkContext之程序启动:Spark程序是通过SparkContext发布到Spark集群的
+	SparkContext之程序运行:Spark程序的运行都是在SparkContext为核心的调度器的指挥下进行的
+	SparkContext之程序结束:SparkContext崩溃或者结束的时候整个SparkContext程序结束!
+
+SparkContext内幕:
+	1.SparkContext构建的顶级三大核心对象:DAGScheduler,TaskScheduler,SchedulerBackend,其中:
+		a)DAGScheduler是面向Job的Stage的高度调度器
+		b)TaskScheduler是一个接口,更具体的Cluster Manager的不同会有不同的实现,
+			Standalone模式下具体的实现是TaskSchedulerImpl
+		c)SchedulerBackend是一个接口,根据具体的Cluster Manager的不同会有不同的实现,
+			Standalone模式下具体实现是SparkDeploySchedulerBackend;
+	2.从整个程序运行的角度来讲,SparkContext包含四大核心对象:
+		DAGScheduler,
+		TaskScheduler,
+		SchedulerBackend,
+		MapOutputTrackerMaster(负责shuffle中数据输出和读取的管理)
+		// Create and start the scheduler
+		val (sched, ts) = SparkContext.createTaskScheduler(this, master)
+		_schedulerBackend = sched
+		_taskScheduler = ts
+		_dagScheduler = new DAGScheduler(this)
+		_heartbeatReceiver.ask[Boolean](TaskSchedulerIsSet)
+		// start TaskScheduler after taskScheduler sets DAGScheduler reference in DAGScheduler's
+		// constructor
+		_taskScheduler.start()
+
+###在SparkContext.createTaskScheduler(this, master)具体源码:
+      case LOCAL_CLUSTER_REGEX(numSlaves, coresPerSlave, memoryPerSlave) =>
+        // Check to make sure memory requested <= memoryPerSlave. Otherwise Spark will just hang.
+        val memoryPerSlaveInt = memoryPerSlave.toInt
+        if (sc.executorMemory > memoryPerSlaveInt) {
+          throw new SparkException(
+            "Asked to launch cluster with %d MB RAM / worker but requested %d MB/worker".format(
+              memoryPerSlaveInt, sc.executorMemory))
+        }
+
+        val scheduler = new TaskSchedulerImpl(sc)
+        val localCluster = new LocalSparkCluster(
+          numSlaves.toInt, coresPerSlave.toInt, memoryPerSlaveInt, sc.conf)
+        val masterUrls = localCluster.start()
+        val backend = new SparkDeploySchedulerBackend(scheduler, sc, masterUrls)
+        //在scheduler.initialize(backend)调用的时候会创建SchedulerPool
+        scheduler.initialize(backend)
+        backend.shutdownCallback = (backend: SparkDeploySchedulerBackend) => {
+          localCluster.stop()
+        }
+流程总结:
+	-->createTaskScheduler():实例化TaskScheduler,创建三大核心实例:
+		-->TaskSchedulerImpl
+		-->SparkDeploySchedulerBackend
+		-->SchedulerPool:FIFO,FAIR等-->
+	-->TaskSchedulerImpl.start()
+		-->SparkDeploySchedulerBackend.start-->AppClient
+			-->ClientEndpoint
+			-->RegisterWithMaster
+			-->tryRegisterAllMasters注册是通过Thread完成的-->注册给Master,Master通过给Work发送指令启动Executor
+				--> Executor1,Executor2,Executor3...-->此时的Executor都向SparkDeploySchedulerBackend注册
+
+		其中代码:
+		 val command = Command("org.apache.spark.executor.CoarseGrainedExecutorBackend",args, sc.executorEnvs, classPathEntries ++ testingClassPath, libraryPathEntries, javaOpts)
+		 AppClient类中:
+		  def start() {
+			// Just launch an rpcEndpoint; it will call back into the listener.
+			endpoint.set(rpcEnv.setupEndpoint("AppClient", new ClientEndpoint(rpcEnv)))
+		  }
+		 client = new AppClient(sc.env.rpcEnv, masters, appDesc, this, conf)
+		 client.start()
+		 	  registerWithMaster(1)
+
+SparkDeploySchedulerBackend有三大核心功能:
+	1.负责与Master连接并注册当前程序
+	2.接收集群中为当前应用程序而分配的计算资源,负责Executor的注册并管理Executors;
+	3.负责发送Task到具体的Executors执行
+	补充说明的是:SparkDeploySchedulerBackend是被TaskSchedulerImpl来管理的
+
+	当通过SparkDeploySchedulerBackend注册程序给Master的时候,会把上述command提交给Master,
+	Master发指令给Worker去启动Executor所在的进程的时候,加载的main方法所在的入口类就是command中的CoarseGrainedExecutorBackend,
+	当然你可以实现自己的ExecutorBackend,在CoarseGrainedExecutorBackend中启动Executor(Executor是先注册再实例化),Executor通过多线程池并发
+DAGScheduler:面向Stage的高层调度器
+SparkUI:背后是Jetty服务器,支持通过WEB方式访问程序的状态
+

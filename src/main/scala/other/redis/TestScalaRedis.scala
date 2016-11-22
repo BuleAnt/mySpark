@@ -9,26 +9,26 @@ object TestScalaRedis {
 	def main(args: Array[String]) {
 		val jr:Jedis = null;
 		try{
-			val jr = new Jedis("192.168.110.127", 6379);
+			val jr = new Jedis("192.168.110.127", 6379)
 			//            jr.auth("test123");
-			System.out.println(jr.ping());
-			System.out.println(jr.isConnected() && jr.ping().equals("PONG"));
-			val key = "bjsxtgaga";
+			System.out.println(jr.ping())
+			System.out.println(jr.isConnected() && jr.ping().equals("PONG"))
+			val key = "bjsxtgaga"
 
-			jr.set(key,"hello redis!");
+			jr.set(key,"hello redis!")
 
-			val v = jr.get(key);
+			val v = jr.get(key)
 
-			val k2 = "count";
+			val k2 = "count"
 
-			jr.incr(k2);
+			jr.incr(k2)
 
-			jr.incr(k2);
+			jr.incr(k2)
 
-			jr.lpush("gaga", "gaga");
-			System.out.println(v);
+			jr.lpush("gaga", "gaga")
+			System.out.println(v)
 
-			System.out.println(jr.get(k2));
+			System.out.println(jr.get(k2))
 
 		}catch {
 			case t => // todo: handle error
@@ -38,8 +38,5 @@ object TestScalaRedis {
 				jr.disconnect()
 			}
 		}
-
-
-
 	}
 }

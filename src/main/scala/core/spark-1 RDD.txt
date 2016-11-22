@@ -1,8 +1,10 @@
 bin/spark-submit --class com.study.spark.WordCount --master spark://hadoop:7010 /opt/app/jar/wordcount.jar
 
-
+Spark概述
+----------------------------------------------------------
 Spark是分布式,基于内存,特别适合迭代式计算的计算框架
-基于内存(在一定情况下也会基于磁盘),业界验证spark可以适合各种规模,5-8000台,PB级别等,数据大于内存时候,会基于磁盘,这时候要注意放置策略和性能调优
+	基于内存(在一定情况下也会基于磁盘),业界验证spark可以适合各种规模,
+	5-8000台,PB级别等,数据大于内存时候,会基于磁盘,这时候要注意放置策略和性能调优
 一个技术堆栈解决所有大数据问题:
 	交互式查询:Shell和spl方式.
 	流处理
@@ -10,21 +12,76 @@ Spark是分布式,基于内存,特别适合迭代式计算的计算框架
 	同时还包含了机器学习,R,图计算等内容
 	等其他模块,一栈式
 理解spark:三个技术方面:
-	1.分布式,多台机器运行,特征:整个spark有一个Driver端,提交给集群,集群中会有多个机器作为Executor,每个机器是一个节点,处理一部分数据,并行化,互补干扰.
+	1.分布式,多台机器运行,
+	特征:整个spark有一个Driver端,提交给集群,集群中会有多个机器作为Executor,每个机器是一个节点,处理一部分数据,并行化,互补干扰.
 	2.主要基于内存,spark优先考虑内存,因此速度会很快,
-	3.迭代式计算,擅长迭代式计算是spark的真正精髓.stage1-->stage2-->starg3.
+	3.迭代式计算,擅长迭代式计算是spark的真正精髓.stage1-->stage2-->stage3.
 	基于内存计算比hadoop快100倍,基于磁盘计算比hadoop10倍
 Spark Runtime
-Dirver-->Worker,RAM,Input Data
+	Driver-->Worker,RAM,Input Data
 
-开发spark:使用语言Scala和Java,Java理由:人才问题,与java ee等整合更加容易,维护更加容易
-开发完Spark后在另一台机器上Driver,在Cluster中运行,处理数据来源: HDFS,HBase,Hive,DB,(Spark SQL只能取代hive的计算引擎Hive分为数据仓库和计算引擎),数据输出:HDFS,HBase,Hive,DB和Driver,Client端或者S3等.
+开发spark:
+	使用语言Scala和Java,Java理由:人才问题,与java ee等整合更加容易,维护更加容易
+	开发完Spark后在另一台机器上Driver,在Cluster中运行,
+	处理数据来源:HDFS,HBase,Hive,DB,(Spark SQL只能取代hive的计算引擎Hive分为数据仓库和计算引擎),
+	数据输出:HDFS,HBase,Hive,DB和Driver,Client端或者S3等.
 
-RDD:弹性分布式数据集(DataSet):Rdd的数据会分片到很多机器节点上存储,默认优先放在具体内存中,弹性解析:
+
+RDD:(Resilient Distributed DataSet)弹性分布式数据集(DataSet):
+----------------------------------------------------------
+	RDD在spark中是最基本,最重要的一个核心抽象概念(base abstraction)
+	RDD是一个不可改变的(immutable),分区(partitioned)的元素集合
+	RDD能够并行的(in parallel)进行操作
+	分区(a list of partitions)
+    	并行计算(a function for computing each split)
+    	依赖(a list of dependencies on anther RDD)
+    	分区:a Partitioner for key-value RDDs(is hash-partitioned)
+    	优先级:a list of preferred location(s) to compute each split on (block locations for an HDFS file)
+	Rdd的数据会分片到很多机器节点上存储,默认优先放在具体内存中,弹性解析:
 	弹性之一:自动的进行内存和磁盘数据存储的切换
 	弹性之二:基于Lineage的高效容错,100个步骤91步骤上出错,可以从第90个步骤恢复
-	弹性之三:Test如果失败会自动进行特定次数的重试(默认4次)
+	弹性之三:Task如果失败会自动进行特定次数的重试(默认4次)
 	弹性之四:stage如果失败会自动进行特定次数的重试,默认3次,并且只计算stage中失败的task
+	弹性第五点:checkpoint和persist(检查还原点,持久化),
+	弹性第六点:数据调度弹性:DAG,Task和资源管理无关,
+	弹性第七点:数据分片的高度弹性,(提高并行度和降低并行度),repartition合并和拆分
+	/**
+    	* Return a new RDD that has exactly numPartitions partitions.
+    	* Can increase or decrease the level of parallelism in this RDD. Internally, this uses
+    	* a shuffle to redistribute data.
+    	*
+    	* If you are decreasing the number of partitions in this RDD, consider using `coalesce`,
+    	* which can avoid performing a shuffle.
+    	*/
+    	def repartition(numPartitions: Int)(implicit ord: Ordering[T] = null): RDD[T] = withScope {
+    		coalesce(numPartitions, shuffle = true)
+    	  }
+    	一个stage有1000个rdd的transportation,默认产生一个中间结果
+    	rdd是分布式函数式编程的抽象,源码说明如何形成rdd的依赖和lazy如下
+    	  def flatMap[U: ClassTag](f: T => TraversableOnce[U]): RDD[U] = withScope {
+    		val cleanF = sc.clean(f)
+    		new MapPartitionsRDD[U, T](this, (context, pid, iter) => iter.flatMap(cleanF))
+    	  }
+	(插:1.3版本后,dataFrame,可以对任意级别数据计算,shuffle可定制)
+
+数据集:
+	Hadoop的MapReduce基于数据集,Spark的RDD基于工作集的应用抽象
+	位置感知,容错,负载均衡.
+	基于数据集的处理:从物理存储上加载数据,然后操作数据,然后写入物理存储设备.经典代表:Hadoop Mapreduce,也是DAG
+	基于数据集操作不适合的场景:不适合大量的迭代.不适合交互式查询,重点是基于数据流的方式不能够复用曾经的结果或者中间计算结果.
+
+rdd容错的方式:
+	数据检查点和记录数据的更新,数据检查点通过网络copy,网络IO是瓶颈.
+	记录数据更新:复杂(每次记录都要更新),耗费性能
+	而spark RDD是基于记录数据更新
+	1.RDD是不可变的链条,Lazy级别-->计算从后往前回溯
+	2.对RDD写(更新)操作和改变都是粗粒度的,RDD的读操作既可以是粗粒度也可以是细粒度的
+	-->设计理由:为了效率,(简化复杂度)
+	-->导致结果:限制了RDD的使用场景,例如网络爬虫,而数据挖掘,机器学习等大多数场景都是粗粒度的
+	3.RDD操作(compute,map...等)返回值接口化,this.type通用性,可扩展性,要做一体化,多元化,兼容一切平台,容器.
+	但是,实时事务性处理取代不了,响应速度(事务性复杂)
+	不支持:细粒度的更新操作,增量迭代计算(粗粒度原因),
+	spark stream可以取代storm
 
 自动RDD做缓存时机:
 	1.计算特别耗时
@@ -32,81 +89,77 @@ RDD:弹性分布式数据集(DataSet):Rdd的数据会分片到很多机器节点
 	3.shuffle之后
 	4.checkpoint之前
 	
-RDD Operations
-1.RDD创建
-2.RDD Transformation
-3.RDD action
-4.RDD cache
-================================================
-复习:
-spark核心RDD
-RDD在saprk中是最基本,最重要的一个核心抽象概念(base abstraction)
-RDD是一个不可改变的(immutable),分区(partitioned)的元素集合
-RDD能够并行的(in parallel)进行操作
-bin/spark-submit --class /opt/app/jar/wordcount.jar
-	分区(a list of partitions)
-	并行计算(a function for computing each split)
-	依赖(a list of dependences on ather RDD)
-	a Partitioner for key-value RDDs(is hash-partitioned)
-	a list of preferred location(s) to compute each split on (block locations for an HDFS file)
-	
-==================================================
+RDD的操作Operations:
+	1.RDD创建
+	2.RDD Transformation
+	3.RDD action
+	4.RDD cache
+	演示:
+	bin/spark-submit --class /opt/app/jar/wordcount.jar
+
 RDD create创建
-bin/spark-shell 
-a)从外部数据源,hadoop文件系统中读取
-val rdd = sc.textFile("hdfs://hadoop:9000/user/spark/wc/input/data")
-rdd.count
-b)来自与本身的集合(parallelize并行化)
-val rdd1 = sc.parallelize(List("a","b"))
-val rdd2 = sc.parallelize(Array(1,2,3,4))
-c)任意被hadoop支持的数据源,例如local file system,HDFS,Cassandra,Hbase,Amazon S3等
-Spark支持 text files,SequenceFiles,和其他Hadoop的InputFormat
+	a)从外部数据源,hadoop文件系统中读取
+		val rdd = sc.textFile("hdfs://hadoop:9000/user/spark/wc/input/data")
+		rdd.count
+	b)来自与本身的集合(parallelize并行化)
+		val rdd1 = sc.parallelize(List("a","b"))
+		val rdd2 = sc.parallelize(Array(1,2,3,4))
+	c)任意被hadoop支持的数据源,例如local file system,HDFS,Cassandra,Hbase,Amazon S3等
+		Spark支持 text files,SequenceFiles,和其他Hadoop的InputFormat
 
 RDD Operations操作
-----------------------------
-RDD支持两种类型的操作:
-1. 一个是(转换)transformations,能够创建一个新RDD数据集从一个已经存在的的rdd
-例如wordcount:从一个RDD变为另外一个RDD
-	文本text--->textfile("/..")-->RDD[String]//一行一行的数据--->flatMap(_.split(" "))-->RDD[(string,int)]//一个个的k-v --->reduceByKey((_+_))-->RDD[(String,Int)]
-2. 还有一个是actions,action能够返回一个值给driver program通过对RDD进行计算
+	1. 一个是(转换)transformations,能够从一个已经存在的的rdd创建一个新RDD数据集
+		例如wordcount:从一个RDD变为另外一个RDD
+		文本text--->textfile("/..")-->RDD[String]//一行一行的数据
+		--->flatMap(_.split(" "))-->RDD[(string,int)]//一个个的k-v
+		--->reduceByKey((_+_))-->RDD[(String,Int)]
+	2. 还有一个是actions,action能够返回一个值给driver program通过对RDD进行计算
 
-transformations不会真正执行,是懒执行操作
-直到出现一个action触发计算,进行实际的数据处理.如:val rdd1 = sc.textFile("/..").flatMap(_.split(" "))map((_,1)).reduceBykey((_+_));以上均不会执行,只有rdd1.count,rdd1.collection等操作才会被真正执行
-transformatcions在spark中是lazy的,意思是他们不会立即计算他们的结果,他们仅仅记住应用与基本数据集的transformations,.....
-实例:
--------------------
-常用的RDD Tansformation
-map(func) ,
-filter(func) ,过滤 func:_.contains(".."),_.startwith("..")
-flatMap(func) ,_.split(" ") 序列化map
-mapPartitions(func) ,mapPartitionsWithIndex(func) ,sample(withReplacement, fraction, seed) ,
-union(otherDataset) ,合并 
-intersection(otherDataset) ,
-distinct([numTasks])) ,去除重复
-groupByKey([numTasks]) ,分组
-reduceByKey(func, [numTasks]) ,按照key进行reduce合并
-aggregateByKey(zeroValue)(seqOp, combOp, [numTasks]) ,
-sortByKey([ascending], [numTasks]) ,按照key进行sort
-join(otherDataSet, [numTasks]) ,加入,
-cogroup(otherDataSet, [numTasks]) ,cartesian(otherDataset) ,pipe(command, [envVars]) ,coalesce(numPartitions) ,repartition(numPartitions) , repartitionAndSortWithinPartitions(partitioner)
+	注:transformations不会真正执行,是懒执行操作,直到出现一个action触发计算,进行实际的数据处理.如:
+		val rdd1 = sc.textFile("/..").flatMap(_.split(" "))map((_,1)).reduceBykey((_+_));
+		以上均不会执行,只有rdd1.count,rdd1.collection等操作才会被真正执行
+	transformatcions在spark中是lazy的,意思是他们不会立即计算他们的结果,他们仅仅记住应用与基本数据集的transformations,.....
 
-常用的RDD action
-reduce(func) ,例如:reduce((_+_))
-collect() :转换成一个集合
-count() 计数
-first() 第一个元素
-take(n) 返回n行/个元素
-takeSample(withReplacement, num, [seed]) takeOrdered(n, [ordering]) saveAsTextFile(path) 文本文件保存
-saveAsSequenceFile(path)(Java and Scala) 
-saveAsObjectFile(path)(Java and Scala) 
-countByKey() 对key进行count
-foreach(func) 遍历
-具体演示见spark-1
+--------------------------------------------------------------------
+RDD Tansformation
+	map(func) ,
+	filter(func) ,过滤 func:_.contains("xx"),_.startwith("xx")
+	flatMap(func) ,_.split(" ") 序列化map
+	partition级别的map:
+	mapPartitions(func) ,mapPartitionsWithIndex(func),
+	sample(withReplacement, fraction, seed) ,
+	union(otherDataset),
+	intersection(otherDataset) ,
+	distinct([numTasks])) ,去除重复
+	分组聚合函数:
+	groupByKey([numTasks]) ,分组
+	reduceByKey(func, [numTasks]) ,按照key进行reduce合并
+	aggregateByKey(zeroValue)(seqOp, combOp, [numTasks]) ,
+	sortByKey([ascending], [numTasks]) ,按照key进行sort
+	join(otherDataSet, [numTasks]) ,加入,
+	cogroup(otherDataSet, [numTasks]),
+	cartesian(otherDataset) ,
+	pipe(command, [envVars]) ,
+	重新分区函数:
+	coalesce(numPartitions) ,repartition(numPartitions) ,repartitionAndSortWithinPartitions(partitioner)
+
+RDD action
+	reduce(func) ,例如:reduce((_+_))
+	collect() :转换成一个集合
+	count(),countByKey()
+	first() 第一个元素
+	take(n) 返回n行/个元素
+	takeSample(withReplacement, num, [seed]) takeOrdered(n, [ordering])
+	foreach(func) 遍历
+	持久化操作:
+	saveAsTextFile(path) 文本文件保存
+	saveAsSequenceFile(path)(Java and Scala)
+	saveAsObjectFile(path)(Java and Scala)
 Shuffle operations
 
 缓存RDD cache:将RDD缓存到内存当中去
-cache方法是延迟执行的,需要讲RDD进行一个action时才执行
-cache是persistent特殊缓存方式,将RDD放到内存中
-rdd.cache
-rdd.count()
+	cache方法是延迟执行的,需要讲RDD进行一个action时才执行
+	cache是persistent特殊缓存方式,将RDD放到内存中
+	rdd.cache
+	rdd.count()
 

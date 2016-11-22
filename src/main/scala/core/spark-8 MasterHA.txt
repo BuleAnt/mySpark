@@ -1,0 +1,151 @@
+Master HA解析
+Master HA的四中方式
+Master HA的内部工作机制
+Master HA的原发解析
+
+做HA步骤:
+下载安装zookeeper,
+一:Master HA解析
+	Driver<-->Master(active)-->zookeeper<--Master(standby)
+	Master<-->Worker<-->executor<-->Driver
+
+	1.生产环境下一般采用Zookeeper做HA,且建议为3台Master,Zookeeper会自动化管理Masters的接环;
+	2.采用Zookeeper做Ha的时候,Zookeeper会负责保存整合Spark集群运行时候的元数据:Workers,Driver,Applications,Executors;
+	3.Zookeeper遇到当前Active级别的Master出现故障的时候会从Standby Masters中选举出一台作为Active Master,
+		但是要注意,被选举后到成为真正的Active Master之间需要从Zookeeper中获取集群当前运行状态的元数据信息并进行恢复
+	4.在Master切换的过程中,所有的已经在运行的程序皆正常运行!
+		因为Spark Application在运行前就已经通过Cluster Manager获得了计算资源,
+		所以在运行时Job本身的调度和处理和Master是没有任何关系的!
+	5.在Master的切换过程中唯一的影响是不能提交新的Job(不仅仅是客户端,运行中的App中新的Job也不能提交),
+		一方面不能够提交新的应用程序给集群,因为只有Active Master磁能接受新的程序的提交请求;
+		另外一方面,已经运行的程序也不能因为Action操作触发新的Job的提交请求
+	原因:
+		1.当Active挂掉后,zookeeper会根据全局状态将选举一个standby转换为Active,
+			通过zookeeper保存的元数据(获取集群的状态信息恢复Worker,Driver,Application)进行恢复,
+			在恢复完成之后,此时被选为Leader的Master才会从Standby到Recovery再到Active级别,产生对外的集群服务
+			也就是说在standby转换为Active中间,不提供外部服务,内部业务情况的运行不会被打断,
+		2.Spark RDD是粗粒度的:
+			程序运行之前已经Master申请过资源,在运行App时候不需要关系资源的分配,
+			所以Driver与Worker之间的通信一般不需要Master参与,所以切换Active过程并不影响Application的运行
+			粗粒度:任务提交后就分配资源,缺点:浪费资源
+			细粒度:在任务启动时候分配资源,缺点:启动慢,在切换Active时候影响App运行
+
+二:Master HA的四大方式
+	1.Master HA的四大方式分别是:ZOOKEEPER,FILESYSTEM,CUSTOM,NONE;
+	2.需要说明的是:
+	ZOOKEEPER是自动管理Master,
+	而FILESYSTEM的方式在Master出现故障后需要手动启动机器,机器启动后会立即成为Active几倍的Master来对外提供服务
+	(接受应用程序提交的请求,接受新的Job运行请求)
+	CUSTOM的方式允许用户自定义Master HA的实现,这对于高级用户特别有用;
+	NONE,这是默认情况,当我们下载安装Spark集群中就是采用这种方式,该方式不会持久化集群的数据,Master启动后立即管理集群
+
+Master源代码:
+	val (persistenceEngine_, leaderElectionAgent_) = RECOVERY_MODE match {
+		  case "ZOOKEEPER" =>
+		logInfo("Persisting recovery state to ZooKeeper")
+			val zkFactory =
+			  new ZooKeeperRecoveryModeFactory(conf, serializer)
+			(zkFactory.createPersistenceEngine(), zkFactory.createLeaderElectionAgent(this))
+		  case "FILESYSTEM" =>
+			val fsFactory =
+			  new FileSystemRecoveryModeFactory(conf, serializer)
+			(fsFactory.createPersistenceEngine(), fsFactory.createLeaderElectionAgent(this))
+		  case "CUSTOM" =>
+			val clazz = Utils.classForName(conf.get("spark.deploy.recoveryMode.factory"))
+			val factory = clazz.getConstructor(classOf[SparkConf], classOf[Serializer])
+			  .newInstance(conf, serializer)
+			  .asInstanceOf[StandaloneRecoveryModeFactory]
+			(factory.createPersistenceEngine(), factory.createLeaderElectionAgent(this))
+		  case _ =>
+			(new BlackHolePersistenceEngine(), new MonarchyLeaderAgent(this))
+		}
+		persistenceEngine = persistenceEngine_
+		leaderElectionAgent = leaderElectionAgent_
+	  }
+		4.PersistenceEngine中有一个只管重要的方法persist来实现数据持久化
+	PersistenceEngine的源码重要方法:
+		  /**
+	   * Defines how the object is serialized and persisted. Implementation will
+	   * depend on the store used.
+	   */
+	  def persist(name: String, obj: Object)
+
+		/**
+	   * Returns the persisted data sorted by their respective ids (which implies that they're
+	   * sorted by time of creation).
+	   */
+	  final def readPersistedData(
+		  rpcEnv: RpcEnv): (Seq[ApplicationInfo], Seq[DriverInfo], Seq[WorkerInfo]) = {
+		rpcEnv.deserialize { () =>
+		  (read[ApplicationInfo]("app_"), read[DriverInfo]("driver_"), read[WorkerInfo]("worker_"))
+		}
+	  }
+
+	5.FILESYSTEM和NONE的方式均是采用MonarchyLeaderAgent的方式来完成Leader的选举的,
+	其实际实现是直接讲传入的Master设置为Leader;源码:new MonarchyLeaderAgent(this)
+
+三:Master HA的内部工作机制
+	Standby Master1,Standby Master2-->使用zookeeper自动Leader的Master
+	-->选举出Leader-->使用ZookeeperPersistenceEngine去读取集群的状态数据,Drivers,Applications,Workers,Executors等信息
+	--->判断元数据信息是否有空的内容
+	-->把通过Zookeeper持久化引擎获得的Drivers,Applications,Executors,Workers等信息重新注册到Master的内存中缓存起来
+	-->(验证获得的信息和当前正在运行的集群状态的一致性)讲Applications和Workers的状态表示伟UNKOWN,
+		然后回想Application中的Driver以及Workers发送现在是Leader的Standby模式的Master的地址信息
+	-->当Drivers和Workers收到新的Master的地址信息后会响应该信息
+	-->Master接收到来自Drivers和Workers的响应信息后会使用一个关键的方法completeRecovery()
+	来对没有响应的Applications,Workers(Executors)进行处理,
+	处理完毕后Master的Stage会变成state = RecoveryState.ALIVE,从而可以开始对外提供服务
+	-->此时Master调用自己的shedule方法对正在等待的Applications和Drivers进行资源调度!!!
+	源代码:
+	  private def completeRecovery() {
+		// Ensure "only-once" recovery semantics using a short synchronization period.
+		if (state != RecoveryState.RECOVERING) { return }
+		state = RecoveryState.COMPLETING_RECOVERY
+
+		// Kill off any workers and apps that didn't respond to us.
+		workers.filter(_.state == WorkerState.UNKNOWN).foreach(removeWorker)
+		apps.filter(_.state == ApplicationState.UNKNOWN).foreach(finishApplication)
+
+		// Reschedule drivers which were not claimed by any workers
+		drivers.filter(_.worker.isEmpty).foreach { d =>
+		  logWarning(s"Driver ${d.id} was not found after master recovery")
+		  if (d.desc.supervise) {
+			logWarning(s"Re-launching ${d.id}")
+			relaunchDriver(d)
+		  } else {
+			removeDriver(d.id, DriverState.ERROR, None)
+			logWarning(s"Did not re-launch ${d.id} because it was not supervised")
+		  }
+		}
+		state = RecoveryState.ALIVE
+		schedule()
+		logInfo("Recovery complete - resuming operations!")
+	  }
+
+	  private def removeDriver(
+		  driverId: String,
+		  finalState: DriverState,
+		  exception: Option[Exception]) {
+		drivers.find(d => d.id == driverId) match {
+		  case Some(driver) =>
+			logInfo(s"Removing driver: $driverId")
+			drivers -= driver
+			if (completedDrivers.size >= RETAINED_DRIVERS) {
+			  val toRemove = math.max(RETAINED_DRIVERS / 10, 1)
+			  completedDrivers.trimStart(toRemove)
+			}
+			completedDrivers += driver
+			persistenceEngine.removeDriver(driver)
+			driver.state = finalState
+			driver.exception = exception
+			driver.worker.foreach(w => w.removeDriver(driver))
+			schedule()
+		  case None =>
+			logWarning(s"Asked to remove unknown driver: $driverId")
+		}
+	  }
+	}
+
+	  final def removeDriver(driver: DriverInfo): Unit = {
+		unpersist("driver_" + driver.id)
+	  }

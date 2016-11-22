@@ -8,55 +8,56 @@ spark
 	通用性:combine SQL,Streaming,复杂计算
 	无处不在的运行,可以部署到hdfs,mesos,standalone,cloud等
 编译:
-支持Hive和JDBC：对SparkSQL启用Hive、JDBC及CLI（命令行）支持， 构建时需要指定-Phive和-Phive-thriftserver两个编译参数，Spark默认支持Hive版本为0.13.
-可以指定Scala版本，如使用Scala 2.11构建Spark，我们可以采用-Dscala-2.11参数设定-Dscala-2.11.注意:Spark JDBC组建暂时不支持Scala 2.11
+	支持Hive和JDBC：对SparkSQL启用Hive、JDBC及CLI（命令行）支持，
+	构建时需要指定-Phive和-Phive-thriftserver两个编译参数，Spark默认支持Hive版本为0.13.
+	可以指定Scala版本，如使用Scala 2.11构建Spark，我们可以采用-Dscala-2.11参数设定-Dscala-2.11.
+	注意:Spark JDBC组建暂时不支持Scala 2.11
 三种方法:其中./make-distribution.sh官方实现脚本,帮助最终打包jar包
-mvn -Pyarn -Phadoop-2.6 -Dhadoop.version=2.7.2 -Phive -Phive-thriftserver -Dscala-2.11.8 -DskipTests clean package
-build/mvn  -Pyarn -Phadoop-2.6 -Dhadoop.version=2.7.2 -Phive -Phive-thriftserver -DskipTests clean package
-./make-distribution.sh --tgz -Pyarn -Phadoop-2.6 -Dhadoop.version=2.7.2 -Phive -Phive-thriftserver -DskipTests
+	mvn -Pyarn -Phadoop-2.6 -Dhadoop.version=2.7.2 -Phive -Phive-thriftserver -Dscala-2.11.8 -DskipTests clean package
+	build/mvn  -Pyarn -Phadoop-2.6 -Dhadoop.version=2.7.2 -Phive -Phive-thriftserver -DskipTests clean package
+	./make-distribution.sh --tgz -Pyarn -Phadoop-2.6 -Dhadoop.version=2.7.2 -Phive -Phive-thriftserver -DskipTests
 spark模式
 ------------------------
 1.local: 本地模式,不是集群
 	Spark-shell (--master MASTER_URL  spark://host:port, mesos://host:port, yarn, or loc)
 	默认为local	==>JPS  SparkSubmit==>4040 webUI
-	单机模式
--------------------
+	单机模式命令演示:
 	bin/spark-shell
 	bin/spark-shell --master local[4]
 	haooop:4040
-scala>
-val textFile = sc.textFile("README.md")
-textFile.count()
-textFile.first()
-textFile.take(10)
+	scala>
+	val textFile = sc.textFile("README.md")
+	textFile.count()
+	textFile.first()
+	textFile.take(10)
 2.独立集群模式:standalone cluster mode(hadoop,yarn...)
 	Master--Worker  (配置信息slaves,spark-env.sh $JAVA_HOME)-->
 	export JAVA_HOME=/usr/local/java/jdk1.7.0_80
 	export SPARK_JAVA_OPTS="-verbose:gc -XX:-PrintGCDetails -XX:+PrintGCTimeStamps"
-#默认scala为2.10.4
+	#默认scala为2.10.4
 	export SCALA_HOME=/usr/local/scala-2.11.8
-#注意如果不配置HADOOP_CONF_DIR,spark运行在本地文件系统上,添加此配置就运行在hdfs上
+	#注意如果不配置HADOOP_CONF_DIR,spark运行在本地文件系统上,添加此配置就运行在hdfs上
 	export HADOOP_CONF_DIR=/opt/single/hadoop-2.7.2/etc/hadoop
 	export SPARK_MASTER_IP=hadoop
 	export SPARK_MASTER_PORT=7077
 	export PARK_MASTER_WEBUI_PORT=8080
 	export SPARK_WORKER_CORES=2
 	export SPARK_WORKER_MEMORY=4g
-#	export SPARK_MASTER_OPTS=7078
-#	export SPARK_WORKER_WEBUI_PORT=8081
+	#export SPARK_MASTER_OPTS=7078
+	#export SPARK_WORKER_WEBUI_PORT=8081
 	export SPARK_WORKER_INSTANCES=1
-slaves
-	hadoop
-spark-defaults.conf
-	spark.master	spark://hadoop:7077
-	#相当于bin/spark-shell --master spark://hadoop:7077
-单机模式与hadoop上启动
-bin/spark-shell --master local[4]
-bin/spark-shell
+	slaves
+		hadoop
+	spark-defaults.conf
+		spark.master	spark://hadoop:7077
+		#相当于bin/spark-shell --master spark://hadoop:7077
+	单机模式与hadoop上启动
+		bin/spark-shell --master local[4]
+		bin/spark-shell
 standalone集群模式
 =========================================================
 standalone集群,建立在hadoop的文件系统之上
-export HADOOP_CONF_DIR=/opt/single/hadoop-2.7.2/etc/hadoop
+	export HADOOP_CONF_DIR=/opt/single/hadoop-2.7.2/etc/hadoop
 启动
 	sbin/start-master.sh	在master节点启动
 	sbin/start-slave.sh spark://hadoop:7077	在slave节点启动,此启动方式为逐个启动
@@ -69,17 +70,15 @@ export HADOOP_CONF_DIR=/opt/single/hadoop-2.7.2/etc/hadoop
 	此时,这个应用就在spark集群上运行通过hadoop:8080查看
 	这个spark-shell的webUI运行状态可以通过 hadoop:4040查看
 
-启动后
-spark运行实例(常用方法演示)
------------------
-val textFile = sc.textFile("README.txt")
-textFile.filter(line => line.contains("Spark")
+启动后spark运行实例(常用方法演示)
+	val textFile = sc.textFile("README.txt")
+	textFile.filter(line => line.contains("Spark")
 
-sc.parallelize{List(1,2,3,4,5)}
-val rdd = sc.parallelize{List(1,2,3,4,5)}
-val mapRdd = rdd.map(2 * _)
- mapRdd.collect
-val filterRdd = sc.parallelize{List(1,2,3,4,5)}.map(_ *2 ).filter( _ > 5).collect
+	sc.parallelize{List(1,2,3,4,5)}
+	val rdd = sc.parallelize{List(1,2,3,4,5)}
+	val mapRdd = rdd.map(2 * _)
+	 mapRdd.collect
+	val filterRdd = sc.parallelize{List(1,2,3,4,5)}.map(_ *2 ).filter( _ > 5).collect
 
 reduceByKey
 ------------------------------
@@ -207,11 +206,15 @@ Application, Application jar, Driver program, Cluster manager, Deploy mode , Wor
 Spark运行架构(Spark Running Architecture)
 --------------------------------
 1.构建Spark Application 运行环境;
-在Driver Program 中新建SparkContext(包含sparkcontext的程序成为Driver Program);Spark Application运行的表现方式为:在集群上运行一组读一的executor进程,这些进程由sparkcontext来协调;
-例如启动一个spark-shell就是一个app,在http://hadoop:8080/中就可以查看到运行的app有如下内容:
-app-20160608151105-0000 (kill)Spark shell 2 4.0GB 2016/06/08 15:11:05  hadoop RUNNING 3.8 h
+	在Driver Program 中新建SparkContext(包含sparkcontext的程序成为Driver Program);
+	Spark Application运行的表现方式为:在集群上运行一组读一的executor进程,这些进程由sparkcontext来协调;
+	例如启动一个spark-shell就是一个app,在http://hadoop:8080/中就可以查看到运行的app有如下内容:
+	app-20160608151105-0000 (kill)Spark shell 2 4.0GB 2016/06/08 15:11:05  hadoop RUNNING 3.8 h
 2.Sparkcontext向资源管理器申请运行Executor资源,并启动StandaloneExcutorBackend,executor向sparkcontent申请task;
-集群通过SparkContext链接到不同cluster mananger(standalone,yarn,mesos),cluster manager为运行应用的Executor分配资源,一旦连接建立后,Spark每个Application就会获得各个节点上的Executor(进程),每个Application都有自己独立的executor进程,Executor才是真正运行WorkNode上的工作进程,他们为应用来计算或者存储数据
+	集群通过SparkContext链接到不同cluster mananger(standalone,yarn,mesos),
+	cluster manager为运行应用的Executor分配资源,一旦连接建立后,
+	Spark每个Application就会获得各个节点上的Executor(进程),每个Application都有自己独立的executor进程,
+	Executor才是真正运行WorkNode上的工作进程,他们为应用来计算或者存储数据
 3.Sparkcontext获取到executor之后,Application的应用代码讲会被发送到各个executor;
 4.Sparkcontext构建RDD DAG图,将RDD DAG图分解为Stage DAG图,将Stage提交给TaskScheduler,最后有TaskScheduler将Task发送给Executor运行.
 5.Task在Executor上运行,运行完毕后释放嗖又资源.
@@ -229,7 +232,6 @@ spark-submint队一个application进行提交.
   <application-jar> \
   [application-arguments]
 MasterURL
-
 
 	spark集群默认调度job的机制
 	-------------------------------

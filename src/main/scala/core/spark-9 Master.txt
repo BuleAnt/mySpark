@@ -1,0 +1,194 @@
+Master接受Driver注册内幕
+Master接受Application注册内幕
+Master接受Worker注册内幕
+Master处理Driver状态变化内幕
+Master处理Executor状态变化内幕
+
+一:Master接受Worker/Driver/Application注册内幕
+	1.Master接受注册的对象主要是:Driver,Application,Worker
+	需要补充说明的是Executor不会注册给Master,Executor是注册给Driver中的SchedulerBackend的;
+	示意图:
+	Worker-->Worker是在启动之后主动向Master注册的-->Master
+	-->通过filter方法过滤状态为DEAD的Worker,对于状态UNKNOWN的Worker会清理掉其曾经的Worker信息并替换为新的Worker信息
+	-->把注册的Worker加入到Master内存的数据结构中-->通过持久化引擎例如Zookeeper把注册信息持久化起来-->Scheduler
+
+	Driver-->Master
+	-->Master会将Driver的信息放入内存缓存中-->加入等待调度的队列
+	-->通过持久化引擎例如Zookeeper把注册信息持久化起来-->Scheduler
+
+	Application-->Master
+	-->Driver启动后会执行SparkContext的初始化,进而导致SparkDeploySchedulerBackend的产生,
+	内部包含AppClient,AppClient的内部有ClientEndpoint来发送RegisterApplication信息给Master
+	-->将Application的信息放入内存缓存中-->把Application加入到等待调度的Application队列中
+	-->通过持久化引擎例如Zookeeper把注册信息持久化起来-->Scheduler
+
+	2.Worker是在启动之后主动向Master注册的,所以如果在生产环境下加入新的Worker到已经正在运行的Spark集群上,
+	此时不需要重新启动Spark集群就能使用新加入的Worker以提升处理能力;
+	
+	  override def receiveAndReply(context: RpcCallContext): PartialFunction[Any, Unit] = {
+		case RequestWorkerState =>
+		  context.reply(WorkerStateResponse(host, port, workerId, executors.values.toList,
+			finishedExecutors.values.toList, drivers.values.toList,
+			finishedDrivers.values.toList, activeMasterUrl, cores, memory,
+			coresUsed, memoryUsed, activeMasterWebUiUrl))
+	  }
+
+	3.Master在接收到Worker注册的请求后,首先会判断一下当前的Master是否是Standby模式,
+	如果是的话就不处理,然后会判断当前Master的内存数据结构idToWorker中是否已经有该Worker的注册信息,
+	如果有的话此时不会重复注册;
+	源码:
+	  override def receiveAndReply(context: RpcCallContext): PartialFunction[Any, Unit] = {
+		case RegisterWorker(
+			id, workerHost, workerPort, workerRef, cores, memory, workerUiPort, publicAddress) => {
+		  logInfo("Registering worker %s:%d with %d cores, %s RAM".format(
+			workerHost, workerPort, cores, Utils.megabytesToString(memory)))
+		  if (state == RecoveryState.STANDBY) {
+			context.reply(MasterInStandby)
+		  } else if (idToWorker.contains(id)) {
+			context.reply(RegisterWorkerFailed("Duplicate worker ID"))
+		  }
+		  else {
+			val worker = new WorkerInfo(id, workerHost, workerPort, cores, memory,
+			  workerRef, workerUiPort, publicAddress)
+			if (registerWorker(worker)) {
+			  persistenceEngine.addWorker(worker)
+			  context.reply(RegisteredWorker(self, masterWebUiUrl))
+			  schedule()
+			} else {
+			  val workerAddress = worker.endpoint.address
+			  logWarning("Worker registration failed. Attempted to re-register worker at same " +
+				"address: " + workerAddress)
+			  context.reply(RegisterWorkerFailed("Attempted to re-register worker at same address: "
+				+ workerAddress))
+			}
+		  }
+		}
+
+	4.Master如果决定接受注册的Worker,
+	首先会会创建WorkerInfo对象来保存注册的Worker的信息,
+	然后调用registerWorker()来执行注册的具体过程
+	然后调用registerWorker来执行具体的注册过程,
+	如果Worker的状态是DEAD的状态则直接过滤掉,对于UNKNOWN的通过removeWorker进行清理(包括清理
+	源码:
+	 private def registerWorker(worker: WorkerInfo): Boolean = {
+		// There may be one or more refs to dead workers on this same node (w/ different ID's),
+		// remove them.
+		workers.filter { w =>
+		  (w.host == worker.host && w.port == worker.port) && (w.state == WorkerState.DEAD)
+		}.foreach { w =>
+		  workers -= w
+		}
+
+		val workerAddress = worker.endpoint.address
+		if (addressToWorker.contains(workerAddress)) {
+		  val oldWorker = addressToWorker(workerAddress)
+		  if (oldWorker.state == WorkerState.UNKNOWN) {
+			// A worker registering from UNKNOWN implies that the worker was restarted during recovery.
+			// The old worker must thus be dead, so we will remove it and accept the new worker.
+			removeWorker(oldWorker)
+		  } else {
+			logInfo("Attempted to re-register worker at same address: " + workerAddress)
+			return false
+		  }
+		}
+
+		workers += worker
+		idToWorker(worker.id) = worker
+		addressToWorker(workerAddress) = worker
+		true
+	  }
+
+	5.注册的时候会先注册Driver,然后再注册Application,
+
+
+二:Master对Driver和Executor状态变化的处理
+	override def receive: PartialFunction方法:
+
+	1.Master对Driver状态变化的处理
+	-->schedule()
+		override def receive: PartialFunction[Any, Unit] = {
+		case DriverStateChanged(driverId, state, exception) => {
+		  state match {
+			case DriverState.ERROR | DriverState.FINISHED | DriverState.KILLED | DriverState.FAILED =>
+			  removeDriver(driverId, state, exception)
+			case _ =>
+			  throw new Exception(s"Received unexpected state update for driver $driverId: $state")
+		  }
+		}
+
+	removeDriver源码:
+		private def removeDriver(
+		  driverId: String,
+		  finalState: DriverState,
+		  exception: Option[Exception]) {
+		drivers.find(d => d.id == driverId) match {
+		  case Some(driver) =>
+			logInfo(s"Removing driver: $driverId")
+			drivers -= driver
+			if (completedDrivers.size >= RETAINED_DRIVERS) {
+			  val toRemove = math.max(RETAINED_DRIVERS / 10, 1)
+			  completedDrivers.trimStart(toRemove)
+			}
+			completedDrivers += driver
+			persistenceEngine.removeDriver(driver)
+			driver.state = finalState
+			driver.exception = exception
+			driver.worker.foreach(w => w.removeDriver(driver))
+			schedule()
+		  case None =>
+			logWarning(s"Asked to remove unknown driver: $driverId")
+		}
+	  }
+
+	2.Executor挂掉时候系统会尝试一定次数的重启(最多重试10次:val MAX_NUM_RETRY = 10)
+	-->schedule()
+	
+		case ExecutorStateChanged(appId, execId, state, message, exitStatus) => {
+		  val execOption = idToApp.get(appId).flatMap(app => app.executors.get(execId))
+		  execOption match {
+			case Some(exec) => {
+			  val appInfo = idToApp(appId)
+			  val oldState = exec.state
+			  exec.state = state
+
+			  if (state == ExecutorState.RUNNING) {
+				assert(oldState == ExecutorState.LAUNCHING,
+				  s"executor $execId state transfer from $oldState to RUNNING is illegal")
+				appInfo.resetRetryCount()
+			  }
+
+			  exec.application.driver.send(ExecutorUpdated(execId, state, message, exitStatus))
+
+			  if (ExecutorState.isFinished(state)) {
+				// Remove this executor from the worker and app
+				logInfo(s"Removing executor ${exec.fullId} because it is $state")
+				// If an application has already finished, preserve its
+				// state to display its information properly on the UI
+				if (!appInfo.isFinished) {
+				  appInfo.removeExecutor(exec)
+				}
+				exec.worker.removeExecutor(exec)
+
+				val normalExit = exitStatus == Some(0)
+				// Only retry certain number of times so we don't go into an infinite loop.
+				if (!normalExit) {
+				  if (appInfo.incrementRetryCount() < ApplicationState.MAX_NUM_RETRY) {
+					schedule()
+				  } else {
+					val execs = appInfo.executors.values
+					if (!execs.exists(_.state == ExecutorState.RUNNING)) {
+					  logError(s"Application ${appInfo.desc.name} with ID ${appInfo.id} failed " +
+						s"${appInfo.retryCount} times; removing it")
+					  removeApplication(appInfo, ApplicationState.FAILED)
+					}
+				  }
+				}
+			  }
+			}
+			case None =>
+			  logWarning(s"Got status update for unknown executor $appId/$execId")
+		  }
+		}
+
+其他参考:Master基于ZooKeeper的High Availability（HA）源码实现
+	http://blog.csdn.net/anzhsoft/article/details/33740737
