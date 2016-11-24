@@ -14,7 +14,7 @@ public class MockAdClickedStats {
 
 		final Random random = new Random();
 		final String[] provinces = new String[]{"Guangdong", "Zhejiang", "Jiangsu", "Fujian"};
-		final Map<String, String[]> cities = new HashMap<>();
+		final Map<String, String[]> cities = new HashMap<String, String[]>();
 		cities.put("Guangdong", new String[]{"Guangzhou", "Shenzhen", "DongGuan"});
 		cities.put("Zhejiang", new String[]{"Hangzhou", "Wenzhou", "Ningbo"});
 		cities.put("Jiangsu", new String[]{"Nanjing", "Suzhou", "Wuxi"});
@@ -35,7 +35,7 @@ public class MockAdClickedStats {
 		ProducerConfig producerConfig = new ProducerConfig(kafkaConf);
 
 		//key为id的索引这里类型Integer,value为实际数据
-		final Producer<Integer, String> producer = new Producer<>(producerConfig);
+		final Producer<Integer, String> producer = new Producer<Integer, String>(producerConfig);
 		//producer发消息
 		new Thread(new Runnable() {
 			@Override

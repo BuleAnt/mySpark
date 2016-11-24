@@ -35,7 +35,7 @@ public class JPairRDD {
 		//
 		JavaPairRDD<String, String> pairRDD = rdd.mapToPair(new PairFunction<String, String, String>() {
 			public Tuple2<String, String> call(String x) throws Exception {
-				return new Tuple2<>(x.split(" ")[0], x);
+				return new Tuple2<String, String>(x.split(" ")[0], x);
 			}
 		});
 		System.out.println("mapToPair:");
@@ -46,11 +46,11 @@ public class JPairRDD {
 		});
 
 		// parallelizePairs
-		List<Tuple2<Integer, Integer>> tuple2List = Arrays.asList(new Tuple2<>(1, 2), new Tuple2<>(3, 4), new Tuple2<>(3, 6));
+		List<Tuple2<Integer, Integer>> tuple2List = Arrays.asList(new Tuple2<Integer, Integer>(1, 2), new Tuple2<Integer, Integer>(3, 4), new Tuple2<Integer, Integer>(3, 6));
 		JavaPairRDD<Integer, Integer> line2 = sc.parallelizePairs(tuple2List)
 				.persist(StorageLevel.MEMORY_ONLY());
 
-		List<Tuple2<Integer, Integer>> tuple2List1 = Arrays.asList(new Tuple2<>(3, 9));
+		List<Tuple2<Integer, Integer>> tuple2List1 = Arrays.asList(new Tuple2<Integer, Integer>(3, 9));
 		JavaPairRDD<Integer, Integer> tuple2RDD = sc.parallelizePairs(tuple2List1)
 				.persist(StorageLevel.MEMORY_ONLY());
 

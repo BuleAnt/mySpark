@@ -49,7 +49,7 @@ public class JSQLJoin {
 
 
 		//动态组拼出Json
-		List<String> peopleInformations = new ArrayList<>();
+		List<String> peopleInformations = new ArrayList<String>();
 		peopleInformations.add("{\"name\":\"Michael\",\"age\":20}");
 		peopleInformations.add("{\"name\":\"Michael\",\"age\":17}");
 		peopleInformations.add("{\"name\":\"Michael\",\"age\":19}");
@@ -84,14 +84,14 @@ public class JSQLJoin {
 					@Override
 					public Tuple2<String, Integer> call(Row row) throws Exception {
 						//Integer.valueOf(String.valueOf(row.getAs("score")))
-						return new Tuple2<>((String) row.getAs("name"), Integer.valueOf(String.valueOf(row.getAs("score"))));
+						return new Tuple2<String, Integer>((String) row.getAs("name"), Integer.valueOf(String.valueOf(row.getAs("score"))));
 					}
 				}).join(execellentNameAgeDF.javaRDD().mapToPair(new PairFunction<Row, String, Integer>() {
 					private static final long serialVersionUID = 1L;
 
 					@Override
 					public Tuple2<String, Integer> call(Row row) throws Exception {
-						return new Tuple2<>((String) row.getAs("name"), Integer.valueOf(String.valueOf(row.getAs("age"))));
+						return new Tuple2<String, Integer>((String) row.getAs("name"), Integer.valueOf(String.valueOf(row.getAs("age"))));
 					}
 				}));
 
@@ -106,7 +106,7 @@ public class JSQLJoin {
 				});
 
 		// RDD-->DataFrame,先组装RDD的StructField
-		List<StructField> structFields = new ArrayList<>();
+		List<StructField> structFields = new ArrayList<StructField>();
 		structFields.add(DataTypes.createStructField("name", DataTypes.StringType, true));
 		structFields.add(DataTypes.createStructField("age", DataTypes.IntegerType, true));
 		structFields.add(DataTypes.createStructField("score", DataTypes.IntegerType, true));

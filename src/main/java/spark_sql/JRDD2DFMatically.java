@@ -41,7 +41,7 @@ public class JRDD2DFMatically {
 		 * 第二步:动态构造DataFrame的元数据,
 		 * 一般而言,有多少列以及每列的具体内容可能来自于Json的文件,也可能来自于数据库DB
 		 */
-		List<StructField> structFields = new ArrayList<>();
+		List<StructField> structFields = new ArrayList<StructField>();
 		//用循环的方式进行添加。最佳实践，数据库的列不要超过32列。当然，Spark对此没有限制
 		structFields.add(DataTypes.createStructField("id", DataTypes.IntegerType, true));
 		structFields.add(DataTypes.createStructField("name", DataTypes.StringType, true));

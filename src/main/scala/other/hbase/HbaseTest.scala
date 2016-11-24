@@ -52,8 +52,8 @@ class HbaseTest {
 				Type.codeToType(cell.getTypeByte),
 				Bytes.toStringBinary(CellUtil.cloneValue(cell))
 			)
-		)*/
 		)
+		)*/
 
 
 		//outPut.foreach(println)

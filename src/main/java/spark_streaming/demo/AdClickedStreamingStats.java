@@ -40,10 +40,10 @@ public class AdClickedStreamingStats {
 
 		JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.seconds(10));
 
-		Map<String, String> kafkaParameters = new HashMap<>();
+		Map<String, String> kafkaParameters = new HashMap<String, String>();
 		//可以添加多个broker
 		kafkaParameters.put("metadata.broker.list", "hadoop:9092");
-		Set<String> topics = new HashSet<>();
+		Set<String> topics = new HashSet<String>();
 		//可以关注多个topic,企业级别一般是可配置的,不能代码硬写
 		topics.add("SparkStreamingDirected");
 		JavaPairDStream<String, String> adClickedStreaming = KafkaUtils
@@ -75,7 +75,7 @@ public class AdClickedStreamingStats {
 				 *  我们要留下的是leftOuterJoin操作结果为false的数据
 				 */
 				JDBCWrapper jdbcWrapper = JDBCWrapper.getJDBCInstance();
-				final List<String> blackListNames = new ArrayList<>();
+				final List<String> blackListNames = new ArrayList<String>();
 				jdbcWrapper.doQuery("SELECT * FROM blacklisttable", null, new ExecuteCallBack() {
 
 					@Override
@@ -86,9 +86,9 @@ public class AdClickedStreamingStats {
 						}
 					}
 				});
-				List<Tuple2<String, Boolean>> blackListFromDB = new ArrayList<>();
+				List<Tuple2<String, Boolean>> blackListFromDB = new ArrayList<Tuple2<String, Boolean>>();
 				for (String name : blackListNames) {
-					blackListFromDB.add(new Tuple2<>(name, true));
+					blackListFromDB.add(new Tuple2<String, Boolean>(name, true));
 				}
 
 				JavaSparkContext jsc = new JavaSparkContext(rdd.context());
@@ -106,7 +106,7 @@ public class AdClickedStreamingStats {
 					@Override
 					public Tuple2<String, Tuple2<String, String>> call(Tuple2<String, String> t) throws Exception {
 						String userID = t._2.split("\t")[2];//timestamp,ip,userID,adID,province,city
-						return new Tuple2<>(userID, t);
+						return new Tuple2<String, Tuple2<String, String>>(userID, t);
 					}
 				});
 
@@ -152,7 +152,7 @@ public class AdClickedStreamingStats {
 				String clickedRecord = timestamp + "_" + ip + "_" + userID + "_" + adID + "_"
 						+ province + "_" + city;
 
-				return new Tuple2<>(clickedRecord, 1L);
+				return new Tuple2<String, Long>(clickedRecord, 1L);
 			}
 		});
 
@@ -212,7 +212,7 @@ public class AdClickedStreamingStats {
 						 * 这里有个问题:可能出现两条记录的key是一样的,此时就需要更新update累加操作
 						 */
 						// TODO jdbc update/insert
-						List<UserAdClicked> userAdClickedList = new ArrayList<>();
+						List<UserAdClicked> userAdClickedList = new ArrayList<UserAdClicked>();
 						while (partition.hasNext()) {
 							Tuple2<String, Long> record = partition.next();
 							String[] splited = record._1.split("_");
@@ -225,8 +225,8 @@ public class AdClickedStreamingStats {
 							userAdClicked.setCity(splited[5]);
 							userAdClickedList.add(userAdClicked);
 						}
-						final List<UserAdClicked> inserting = new ArrayList<>();
-						final List<UserAdClicked> updating = new ArrayList<>();
+						final List<UserAdClicked> inserting = new ArrayList<UserAdClicked>();
+						final List<UserAdClicked> updating = new ArrayList<UserAdClicked>();
 
 						JDBCWrapper jdbcWrapper = JDBCWrapper.getJDBCInstance();
 						// 判断DB中是否含有该数据:字段:timeStamp,ip,userID,adID,province,city,clickedCount
@@ -250,7 +250,7 @@ public class AdClickedStreamingStats {
 									});
 						}
 
-						ArrayList<Object[]> inserParametersList = new ArrayList<>();
+						ArrayList<Object[]> inserParametersList = new ArrayList<Object[]>();
 						for (UserAdClicked insertRecord : inserting) {
 							inserParametersList.add(new Object[]{
 									insertRecord.getTimestamp(),
@@ -265,7 +265,7 @@ public class AdClickedStreamingStats {
 						jdbcWrapper.doBatch("INSERT INTO adclicked VALUES(?,?,?,?,?,?,?)", inserParametersList);
 
 
-						ArrayList<Object[]> updateParametersList = new ArrayList<>();
+						ArrayList<Object[]> updateParametersList = new ArrayList<Object[]>();
 						for (UserAdClicked updateRecord : updating) {
 							updateParametersList.add(new Object[]{
 									updateRecord.getClickedCount(),
@@ -347,7 +347,7 @@ public class AdClickedStreamingStats {
 						 * 此时对blackListUserId直接插入黑名单数据表即可
 						 */
 						//TODO 这里只是功能性的实现,企业级别要进行javaBean设计
-						List<Object[]> blackList = new ArrayList<>();
+						List<Object[]> blackList = new ArrayList<Object[]>();
 						while (t.hasNext()) {
 							blackList.add(new Object[]{t.next()});
 						}
@@ -377,7 +377,7 @@ public class AdClickedStreamingStats {
 
 				String clickedRecord = timestamp + "_" + adID + "_"
 						+ province + "_" + city;
-				return new Tuple2<>(clickedRecord, 1L);
+				return new Tuple2<String, Long>(clickedRecord, 1L);
 			}
 		}).updateStateByKey(new Function2<List<Long>, Optional<Long>, Optional<Long>>() {
 			/**
@@ -407,7 +407,7 @@ public class AdClickedStreamingStats {
 				rdd.foreachPartition(new VoidFunction<Iterator<Tuple2<String, Long>>>() {
 					@Override
 					public void call(Iterator<Tuple2<String, Long>> partition) throws Exception {
-						List<AdClicked> userAdClickedList = new ArrayList<>();
+						List<AdClicked> userAdClickedList = new ArrayList<AdClicked>();
 						while (partition.hasNext()) {
 							Tuple2<String, Long> record = partition.next();//
 							String[] splited = record._1.split("\t");
@@ -421,8 +421,8 @@ public class AdClickedStreamingStats {
 							adClicked.setClickedCount(record._2);
 
 
-							final List<AdClicked> inserting = new ArrayList<>();
-							final List<AdClicked> updating = new ArrayList<>();
+							final List<AdClicked> inserting = new ArrayList<AdClicked>();
+							final List<AdClicked> updating = new ArrayList<AdClicked>();
 
 							JDBCWrapper jdbcWrapper = JDBCWrapper.getJDBCInstance();
 							// 判断DB中是否含有该数据:字段:timeStamp,ip,userID,adID,province,city,clickedCount
@@ -446,7 +446,7 @@ public class AdClickedStreamingStats {
 										});
 							}
 
-							ArrayList<Object[]> inserParametersList = new ArrayList<>();
+							ArrayList<Object[]> inserParametersList = new ArrayList<Object[]>();
 							for (AdClicked insertRecord : inserting) {
 								inserParametersList.add(new Object[]{
 										insertRecord.getTimestamp(),
@@ -459,7 +459,7 @@ public class AdClickedStreamingStats {
 							jdbcWrapper.doBatch("INSERT INTO clickedcount VALUES(?,?,?,?,?)", inserParametersList);
 
 
-							ArrayList<Object[]> updateParametersList = new ArrayList<>();
+							ArrayList<Object[]> updateParametersList = new ArrayList<Object[]>();
 							for (AdClicked updateRecord : updating) {
 								updateParametersList.add(new Object[]{
 										updateRecord.getClickedCount(),
@@ -499,7 +499,7 @@ public class AdClickedStreamingStats {
 
 						String clickedRecord = timestamp + "_" + adID + "_" + province;
 
-						return new Tuple2<>(clickedRecord, t._2);
+						return new Tuple2<String, Long>(clickedRecord, t._2);
 					}
 				}).reduceByKey(new Function2<Long, Long, Long>() {//根据timestamp_adID_province进行reduce
 					@Override
@@ -543,7 +543,7 @@ public class AdClickedStreamingStats {
 					@Override
 					public void call(Iterator<Row> rowIterator) throws Exception {
 
-						List<AdProvinceTopN> adProvinceTopN = new ArrayList<>();
+						List<AdProvinceTopN> adProvinceTopN = new ArrayList<AdProvinceTopN>();
 						while (rowIterator.hasNext()) {
 							Row row = rowIterator.next();
 							AdProvinceTopN item = new AdProvinceTopN();
@@ -554,14 +554,14 @@ public class AdClickedStreamingStats {
 							adProvinceTopN.add(item);
 						}
 
-						Set<String> set = new HashSet<>();
+						Set<String> set = new HashSet<String>();
 
 						//去重操作
 						for (AdProvinceTopN item : adProvinceTopN) {
 							set.add(item.getTimestamp() + "_" + item.getProvince());
 						}
 						//按天,分省份的top5,先删除
-						ArrayList<Object[]> deleteParametersList = new ArrayList<>();
+						ArrayList<Object[]> deleteParametersList = new ArrayList<Object[]>();
 						for (String deleteRecord : set) {
 							String[] splited = deleteRecord.split("_");
 							deleteParametersList.add(splited);
@@ -571,7 +571,7 @@ public class AdClickedStreamingStats {
 						jdbcWrapper.doBatch(sqlDelete, deleteParametersList);
 
 						//update: timestamp,adID,province,clickedCount
-						ArrayList<Object[]> insertParametersList = new ArrayList<>();
+						ArrayList<Object[]> insertParametersList = new ArrayList<Object[]>();
 						for (AdProvinceTopN insertRecord : adProvinceTopN) {
 							insertParametersList.add(new Object[]{
 									insertRecord.getTimestamp(),
@@ -601,7 +601,7 @@ public class AdClickedStreamingStats {
 				String time = splited[0];//以分钟为单位,10s的若干倍,便于聚合
 				String adID = splited[3];
 
-				return new Tuple2<>(time + "_" + adID, 1L);
+				return new Tuple2<String, Long>(time + "_" + adID, 1L);
 			}
 		}).reduceByKeyAndWindow(new Function2<Long, Long, Long>() { //reduceByKeyAndWindow的高效实现统计过去30min
 			@Override
@@ -624,7 +624,7 @@ public class AdClickedStreamingStats {
 					public void call(Iterator<Tuple2<String, Long>> partition) throws Exception {
 
 						// 针对3个关键维度(时间(年月日,时,分),广告id,点击次数)构建javaBean
-						List<AdTrendStat> adTrendList = new ArrayList<>();
+						List<AdTrendStat> adTrendList = new ArrayList<AdTrendStat>();
 						while (partition.hasNext()) {
 							Tuple2<String, Long> record = partition.next();
 							String[] splited = record._1.split("_");
@@ -657,8 +657,8 @@ public class AdClickedStreamingStats {
 						 * 先判断DB的adclickedtrend是否存在该Ad的点击记录,如果有使用update,如果没有使用insert
 						 */
 
-						final List<AdTrendStat> inserting = new ArrayList<>();
-						final List<AdTrendStat> updating = new ArrayList<>();
+						final List<AdTrendStat> inserting = new ArrayList<AdTrendStat>();
+						final List<AdTrendStat> updating = new ArrayList<AdTrendStat>();
 						for (final AdTrendStat clicked : adTrendList) {
 							final AdTrendCountHistory adTrendCountHistory = new AdTrendCountHistory();
 
@@ -680,7 +680,7 @@ public class AdClickedStreamingStats {
 									});
 						}
 
-						ArrayList<Object[]> inserParametersList = new ArrayList<>();
+						ArrayList<Object[]> inserParametersList = new ArrayList<Object[]>();
 						for (AdTrendStat insertRecord : inserting) {
 							inserParametersList.add(new Object[]{
 									insertRecord.get_data(),
@@ -694,7 +694,7 @@ public class AdClickedStreamingStats {
 						jdbcWrapper.doBatch("INSERT INTO adclickedtrend VALUES(?,?,?,?,?)", inserParametersList);
 
 
-						ArrayList<Object[]> updateParametersList = new ArrayList<>();
+						ArrayList<Object[]> updateParametersList = new ArrayList<Object[]>();
 						for (AdTrendStat updateRecord : updating) {
 							updateParametersList.add(new Object[]{
 									updateRecord.getClickedCount(),
@@ -726,7 +726,7 @@ class JDBCWrapper {
 
 	private static JDBCWrapper jdbcInstance = null;
 	// 线程安全
-	private static LinkedBlockingDeque<Connection> dbConnectionPool = new LinkedBlockingDeque<>();
+	private static LinkedBlockingDeque<Connection> dbConnectionPool = new LinkedBlockingDeque<Connection>();
 
 	static {
 		try {

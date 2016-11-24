@@ -78,7 +78,7 @@ public class JJDBC2MySql {
 					@Override
 					public Tuple2<String, Integer> call(Row row)
 							throws Exception {
-						return new Tuple2<>((String) row.getAs("name"), Integer.valueOf(String.valueOf(row.getAs("age"))));
+						return new Tuple2<String, Integer>((String) row.getAs("name"), Integer.valueOf(String.valueOf(row.getAs("age"))));
 					}
 				})
 				.join(dtStuScoreDF.javaRDD().mapToPair(
@@ -87,7 +87,7 @@ public class JJDBC2MySql {
 
 							@Override
 							public Tuple2<String, Integer> call(Row row) throws Exception {
-								return new Tuple2<>((String) row.getAs("name"), Integer.valueOf(String.valueOf(row.getAs("score"))));
+								return new Tuple2<String, Integer>((String) row.getAs("name"), Integer.valueOf(String.valueOf(row.getAs("score"))));
 							}
 						}));
 		//通过map将PairRDD转换为rowRDD
@@ -102,7 +102,7 @@ public class JJDBC2MySql {
 		});
 
 		//构建structType,通过createDataFrame将RDD转换为DataFrame
-		List<StructField> structFields = new ArrayList<>();
+		List<StructField> structFields = new ArrayList<StructField>();
 		structFields.add(DataTypes.createStructField("name", DataTypes.StringType, true));
 		structFields.add(DataTypes.createStructField("age", DataTypes.IntegerType, true));
 		structFields.add(DataTypes.createStructField("score", DataTypes.IntegerType, true));

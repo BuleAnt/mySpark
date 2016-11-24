@@ -33,11 +33,11 @@ public class OnlineBBSUserLogs {
 				setAppName("OnlineBBSUserLogs");
 		JavaStreamingContext jsc = new JavaStreamingContext(conf, Durations.seconds(5));
 
-		Map<String, String> kafkaParameters = new HashMap<>();
+		Map<String, String> kafkaParameters = new HashMap<String, String>();
 		kafkaParameters.put("metadata.broker.list", "hadoop:9092");
 
 		// topics不能重复所以用HashSet
-		Set<String> topics = new HashSet<>();
+		Set<String> topics = new HashSet<String>();
 		topics.add("UserLogs");
 
 		// KafkaUtils.createDirectStream方式创建DStream
@@ -88,7 +88,7 @@ public class OnlineBBSUserLogs {
 
 				Long pageId = Long.valueOf(logs[3]);
 				//每次计数为1
-				return new Tuple2<>(pageId, 1L);
+				return new Tuple2<Long, Long>(pageId, 1L);
 			}
 		});
 
@@ -145,7 +145,7 @@ public class OnlineBBSUserLogs {
 			public Tuple2<Long, Long> call(String s) throws Exception {
 				String[] logs = s.split("_");
 				Long pageID = Long.valueOf(logs[0]);
-				return new Tuple2<>(pageID, 1L);
+				return new Tuple2<Long, Long>(pageID, 1L);
 			}
 		}).print();
 	}
@@ -181,7 +181,7 @@ public class OnlineBBSUserLogs {
 
 				Long pageId = Long.valueOf(logs[3]);
 				//每次计数为1
-				return new Tuple2<>(pageId, 1L);
+				return new Tuple2<Long, Long>(pageId, 1L);
 			}
 		}).reduceByKey(new Function2<Long, Long, Long>() {
 			@Override
@@ -205,7 +205,7 @@ public class OnlineBBSUserLogs {
 			public Tuple2<String, Long> call(Tuple2<String, String> t) throws Exception {
 				String[] logs = t._2.split("\t");
 
-				return new Tuple2<>(String.valueOf(logs[4]), 1L);//(channelID,1)
+				return new Tuple2<String, Long>(String.valueOf(logs[4]), 1L);//(channelID,1)
 			}
 		}).reduceByKey(new Function2<Long, Long, Long>() {
 			@Override

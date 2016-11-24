@@ -58,6 +58,6 @@ object WordCount {
 				.flatMap(_.split(' '))
 				.map((_, 1))
 				.reduceByKey(_ + _).collect()
-				.foreach(println)
+				//.foreach(println)
 	}
 }

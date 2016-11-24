@@ -26,7 +26,7 @@ public class Kafka2SparkStreaming {
 		//**********************************************************************************//
 		//*************通过KafkaReceiver或ReliableKafkaReceiver pulls messages***************//
 		//**********************************************************************************//
-		Map<String, Integer> topicConsumerConcurrency = new HashMap<>();
+		Map<String, Integer> topicConsumerConcurrency = new HashMap<String, Integer>();
 		topicConsumerConcurrency.put("HelloKafka", 1);//这里2个的话是指2个接受的线程
 		/**
 		 * KafkaUtils.createStream通过zk获取offset来从Kafka中获取消息.具体参数含义：
@@ -44,10 +44,10 @@ public class Kafka2SparkStreaming {
 		//**********************************************************************************//
 		//****通过DirectKafkaInputDStream directly pulls messages exactly once **************//
 		//**********************************************************************************//
-		Map<String, String> kafkaParameters = new HashMap<>();
+		Map<String, String> kafkaParameters = new HashMap<String, String>();
 		//这里的kafka
 		kafkaParameters.put("metadata.broker.list", "hadoop:9092");
-		Set<String> topics = new HashSet<>();
+		Set<String> topics = new HashSet<String>();
 		topics.add("HelloKafka");
 		/**
 		 *  KafkaUtils.createDirectStream是直接通过broker.list获取Kafka消息,参数如下:
@@ -80,7 +80,7 @@ public class Kafka2SparkStreaming {
 
 			@Override
 			public Tuple2<String, Integer> call(String word) throws Exception {
-				return new Tuple2<>(word, 1);
+				return new Tuple2<String, Integer>(word, 1);
 			}
 		});
 

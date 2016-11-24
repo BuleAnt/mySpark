@@ -21,7 +21,7 @@ public class ConnectionPool {
 	public synchronized static Connection getConnection() {
 		try {
 			if (connectionQueue == null) {
-				connectionQueue = new LinkedList<>();
+				connectionQueue = new LinkedList<Connection>();
 				for (int i = 0; i < 5; i++) {
 					Connection conn = DriverManager.getConnection(
 							"jdbc:mysql://hadoop:3306/streaming", "root", "root");

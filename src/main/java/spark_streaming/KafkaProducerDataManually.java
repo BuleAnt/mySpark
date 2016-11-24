@@ -58,7 +58,7 @@ public class KafkaProducerDataManually extends Thread {
 		//Kafka在生成的时候有个key,key的序列化器，这是默认的方式
 		conf.put("serializer.class", "kafka.serializer.StringEncoder");
 		//基于这些内容，构造器创建Kafka的Produce
-		producerForKafka = new Producer<>(new ProducerConfig(conf));
+		producerForKafka = new Producer<Integer, String>(new ProducerConfig(conf));
 	}
 
 	@Override
