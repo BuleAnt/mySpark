@@ -7,6 +7,7 @@ http://spark.apache.org/docs/latest/running-on-yarn.html#configuration
 spark on tachyon
 http://cache.baiducontent.com/c?m=9d78d513d9901fb8599dca39474d8a711925c1216f9789013894cd47c9221d03506790a63a675541c4c50b215baa5e5c9da16a6f55437de2db9bd75785e8d67b32882537741e825c18d91babca4732c157d100aff047&p=b433ca16d9c113dd08e2977e0c4381&newp=9077f916d9c12dff57ee947f4d0794231610db2151d4d0146b82c825d7331b001c3bbfb423231407d1c57e6600a44c58e9f33c7432072ba3dda5c91d9fb4c57479e4&user=baidu&fm=sc&query=alluxio+spark&qid=8ded521a00023646&p1=1
 http://www.alluxio.org/docs/master/en/Getting-Started.html
+http://blog.csdn.net/u012587561/article/details/51040018
 安装:
 http://blog.csdn.net/lsshlsw/article/details/52050651
 
