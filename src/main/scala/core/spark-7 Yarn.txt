@@ -72,3 +72,4 @@ Spark on Yarn 的两种运行模式实战:
 	Standalone模式下启动Spark集群(也就是启动Master和Worker)其实启动的是资源管理器,真正作业计算的时候和集群资源管理器没有任何关系,
 	所以spark的Job真正执行作业的时候不是运行在启动的Spark集群中的,而是运行在一个JVM中的,只要JVM所在的机器上安装配置了Spark即可!!!
 
+配置:
