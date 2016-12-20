@@ -1,0 +1,107 @@
+Spark on yarn配置项说明与优化整理
+http://www.aboutyun.com/thread-11616-1-1.html
+
+配置于spark-default.conf
+
+1. #spark.yarn.applicationMaster.waitTries  5
+用于applicationMaster等待Spark master的次数以及SparkContext初始化尝试的次数 (一般不用设置)
+
+2.spark.yarn.am.waitTime 100s
+
+3.spark.yarn.submit.file.replication 3
+应用程序上载到HDFS的复制份数
+
+4.spark.preserve.staging.files    false
+设置为true，在job结束后，将stage相关的文件保留而不是删除。 （一般无需保留，设置成false)
+
+5.spark.yarn.scheduler.heartbeat.interal-ms  5000
+Spark application master给YARN ResourceManager 发送心跳的时间间隔（ms）
+
+spark.yarn.max.executor.failures    	numExecutors * 2,最小为3
+失败应用程序之前最大的执行失败数
+
+spark.yarn.historyServer.address	(none)	Spark历史服务器（如host.com:18080）的地址。
+这个地址不应该包含一个模式（http://）。
+默认情况下没有设置值，这是因为该选项是一个可选选项。
+当Spark应用程序完成从ResourceManager UI到Spark历史
+服务器UI的连接时，这个地址从YARN ResourceManager得到
+
+spark.yarn.dist.archives	(none)	提取逗号分隔的档案列表到每个执行器的工作目录
+spark.yarn.dist.files	(none)	放置逗号分隔的文件列表到每个执行器的工作目录
+
+
+6.spark.yarn.executor.memoryOverhead   executorMemory * 0.07,最小384
+分配给每个执行器的堆内存大小（以MB为单位）。
+它是VM开销、interned字符串或者其它本地开销占用的内存。
+这往往随着执行器大小而增长。（典型情况下是6%-10%）
+此为vm的开销（根据实际情况调整)
+
+spark.yarn.driver.memoryOverhead    driverMemory * 0.07,最小384
+分配给每个driver的堆内存大小（以MB为单位）。
+它是VM开销、interned字符串或者其它本地开销占用的内存。
+这往往随着执行器大小而增长。（典型情况下是6%-10%）
+
+spark.yarn.queue	default
+应用程序被提交到的YARN队列的名称
+
+spark.yarn.jar	(none)
+Spark jar文件的位置，覆盖默认的位置。默认情况下，
+Spark on YARN将会用到本地安装的Spark jar。
+但是Spark jar也可以HDFS中的一个公共位置。
+这允许YARN缓存它到节点上，而不用在每次运行应用程序时都需要分配。
+指向HDFS中的jar包，可以这个参数为"hdfs:///some/path"
+
+spark.yarn.access.namenodes	(none)
+你的Spark应用程序访问的HDFS namenode列表。例如，spark.yarn.access.namenodes=hdfs://nn1
+.com:8032,hdfs://nn2.com:8032，
+Spark应用程序必须访问namenode列表，
+Kerberos必须正确配置来访问它们。
+Spark获得namenode的安全令牌，
+这样Spark应用程序就能够访问这些远程的HDFS集群。
+
+spark.yarn.containerLauncherMaxThreads	25
+为了启动执行者容器，应用程序master用到的最大线程数
+
+spark.yarn.appMasterEnv.[EnvironmentVariableName]	(none)
+添加通过EnvironmentVariableName指定的环境变量
+到Application Master处理YARN上的启动。
+用户可以指定多个该设置，从而设置多个环境变量。
+在yarn-cluster模式下，这控制Spark driver的环境。
+在yarn-client模式下，这仅仅控制执行器启动者的环境。
+
+7.spark.shuffle.consolidateFiles  true
+仅适用于HashShuffleMananger的实现，同样是为了解决生成过多文件的问题，采用的方式是在不同批次运行的Map任务之间重用Shuffle输出文件，也就是说合并的是不同批次的Map任务的输出数据，但是每个Map任务所需要的文件还是取决于Reduce分区的数量，因此，它并不减少同时打开的输出文件的数量，因此对内存使用量的减少并没有帮助。只是HashShuffleManager里的一个折中的解决方案。
+
+8.spark.serializer        org.apache.spark.serializer.KryoSerializer
+暂时只支持Java serializer和KryoSerializer序列化方式
+
+9.spark.kryoserializer.buffer.max 128m
+允许的最大大小的序列化值。
+
+10.spark.storage.memoryFraction    0.3
+用来调整cache所占用的内存大小。默认为0.6。如果频繁发生Full GC，可以考虑降低这个比值，这样RDD Cache可用的内存空间减少（剩下的部分Cache数据就需要通过Disk Store写到磁盘上了），会带来一定的性能损失，但是腾出更多的内存空间用于执行任务，减少Full GC发生的次数，反而可能改善程序运行的整体性能。
+
+11.spark.sql.shuffle.partitions 800
+一个partition对应着一个task,如果数据量过大，可以调整次参数来减少每个task所需消耗的内存.
+
+12.spark.sql.autoBroadcastJoinThreshold -1
+当处理join查询时广播到每个worker的表的最大字节数，当设置为-1广播功能将失效。
+
+13.spark.speculation   false
+如果设置成true，倘若有一个或多个task执行相当缓慢，就会被重启执行。（事实证明，这种做法会造成hdfs中临时文件的丢失，报找不到文件的错)
+
+14.spark.shuffle.manager tungsten-sort
+tungsten-sort是一种类似于sort的shuffle方式，shuffle data还有其他两种方式 sort、hash. (不过官网说 tungsten-sort 应用于spark 1.5版本以上）
+
+15.spark.sql.codegen true
+Spark SQL在每次执行次，先把SQL查询编译JAVA字节码。针对执行时间长的SQL查询或频繁执行的SQL查询，此配置能加快查询速度，因为它产生特殊的字节码去执行。但是针对很短的查询，可能会增加开销，因为它必须先编译每一个查询
+
+16.spark.shuffle.spill false
+如果设置成true，将会把spill的数据存入磁盘
+
+17.spark.shuffle.consolidateFiles true
+ 我们都知道shuffle默认情况下的文件数据为map tasks * reduce tasks,通过设置其为true,可以使spark合并shuffle的中间文件为reduce的tasks数目。
+
+18.代码中 如果filter过滤后 会有很多空的任务或小文件产生，这时我们使用coalesce或repartition去减少RDD中partition数量。
+
+
