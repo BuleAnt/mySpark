@@ -157,10 +157,10 @@ l  最优化：大多数以上方法，直接或者间接使用最优化算法�
 
 http://www.cnblogs.com/shishanyuan/p/4699644.html
 
-
-
-
-
+http://www.36dsj.com/archives/37699
+http://dblab.xmu.edu.cn/blog/spark/
+http://mocom.xmu.edu.cn/article/show/5858ab782b2730e00d70fa08/0/1
+http://mocom.xmu.edu.cn/article/show/584816afe083c990247075a2/0/1
 
 
 
