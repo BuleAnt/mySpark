@@ -170,7 +170,7 @@
 
     <build>
         <sourceDirectory>${basedir}/src/main/scala</sourceDirectory>
-        <testSourceDirectory>${basedir}/src/test/scala</testSourceDirectory>
+       <!-- <testSourceDirectory>${basedir}/src/test/scala</testSourceDirectory>-->
         <resources>
             <resource>
                 <directory>${basedir}/src/main/resources</directory>
