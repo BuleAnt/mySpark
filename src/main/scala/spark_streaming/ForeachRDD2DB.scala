@@ -14,7 +14,7 @@ object ForeachRDD2DB {
 		val conf = new SparkConf().setAppName("OnlineForeachRDD2DB").setMaster("local[2]")
 		val ssc = new StreamingContext(conf, Seconds(5))
 
-		val lines = ssc.socketTextStream("hadoop", 9999)
+		val lines = ssc.socketTextStream("localhost", 9999)
 		val words = lines.flatMap(_.split(" "))
 		val wordCounts = words.map(x => (x, 1)).reduceByKey(_ + _)
 
@@ -22,7 +22,7 @@ object ForeachRDD2DB {
 		wordCounts.foreachRDD { rdd =>
 			rdd.foreachPartition { partitionOfRecords => {
 				//连接池,直接调用java的代码
-				val connection = ConnectionPool.getConnection()
+				val connection = ConnectionPool.getConnection
 				partitionOfRecords.foreach(record => {
 					val sql = "insert into item_count(item,count) values('" + record._1 + "'," + record._2 + ")"
 					val stmt = connection.createStatement

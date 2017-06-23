@@ -1,0 +1,4 @@
+export MAVEN_OPTS="-Xmx2g -XX:ReservedCodeCacheSize=512m -XX:MaxPermSize=512M"
+./build/mvn -Pyarn -Phadoop-2.4 -Dhadoop.version=2.5.2 -DskipTests clean package
+./make-distribution.sh --tgz --name 2.6.0 -Pyarn -Phadoop-2.4 -Phive
+./dev/make-distribution.sh --name custom-spark --tgz -Psparkr -Phadoop-2.4 -Dhadoop.version=2.5.2  -Phive -Phive-thriftserver -Pyarn -Dscala-2.11 -DskipTests clean package
