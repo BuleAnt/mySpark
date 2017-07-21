@@ -59,7 +59,7 @@ object BlackListFilter {
         * 计算后的有效数据一般都会写入Kafka中，下游的计费系统会从kafka中pull到有效数据进行计费
         */
     }).print
-    adsClickStreamFormatted.saveAsTextFiles()
+    adsClickStreamFormatted.saveAsTextFiles("")
     ssc.start()
     ssc.awaitTermination()
   }
