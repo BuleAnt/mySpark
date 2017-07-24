@@ -12,7 +12,7 @@ object irisKmeans {
     //设定名称
     val sc = new SparkContext(conf)
     //创建环境变量实例
-    //val data = MLUtils.loadLibSVMFile(sc, "c://a.txt")
+    //val data = MLUtils.loadLibSVMFile(sc, "c://2.txt")
     val data = sc.textFile("")
     //输入数据集
     val parsedData = data.map(s => Vectors.dense(s.split(' ').map(_.toDouble)))

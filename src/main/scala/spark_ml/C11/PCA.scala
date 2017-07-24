@@ -9,7 +9,7 @@ val conf = new SparkConf()                                   	//创建环境变�
 .setAppName("PCA ")                                    		//设定名称
 val sc = new SparkContext(conf)                                 //创建环境变量实例
 
-    val data = sc.textFile("c://a.txt")                                   //创建RDD文件路径
+    val data = sc.textFile("c://2.txt")                                   //创建RDD文件路径
       .map(_.split(' ')                                               //按“ ”分割
       .map(_.toDouble))                                            //转成Double类型
       .map(line => Vectors.dense(line))                               //转成Vector格式

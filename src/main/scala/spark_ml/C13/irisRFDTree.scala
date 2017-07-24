@@ -8,7 +8,7 @@ val conf = new SparkConf()                                     //创建环境变
 .setMaster("local")                                             //设置本地化处理
 .setAppName("irisRFDTree")                              		//设定名称
     val sc = new SparkContext(conf)                                 //创建环境变量实例
-    val data = MLUtils.loadLibSVMFile(sc, "c://a.txt")				//输入数据集
+    val data = MLUtils.loadLibSVMFile(sc, "c://2.txt")				//输入数据集
     
 val numClasses = 3										//设定分类的数量
     val categoricalFeaturesInfo = Map[Int, Int]()					//设置输入数据格式

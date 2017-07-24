@@ -1,3 +1,5 @@
+package spark_ml.C03
+
 import org.apache.spark.{SparkContext, SparkConf}
 
 object Repartition {

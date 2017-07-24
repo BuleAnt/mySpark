@@ -11,7 +11,7 @@ object irisDecisionTree {
     //设定名称
     val sc = new SparkContext(conf)
     //创建环境变量实例
-    val data = MLUtils.loadLibSVMFile(sc, "c://a.txt")
+    val data = MLUtils.loadLibSVMFile(sc, "c://2.txt")
     //输入数据集
     val numClasses = 3
     //设定分类数量
