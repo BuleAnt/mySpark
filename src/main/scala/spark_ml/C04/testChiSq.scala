@@ -1,9 +1,10 @@
 import org.apache.spark.mllib.linalg.{Matrices, Vectors}
 import org.apache.spark.mllib.stat.Statistics
 
-object testChiSq{
+object testChiSq {
   def main(args: Array[String]) {
-    val vd = Vectors.dense(1,2,3,4,5)                                 //
+    val vd = Vectors.dense(1, 2, 3, 4, 5)
+    //
     val vdResult = Statistics.chiSqTest(vd)
     println(vdResult)
     println("-------------------------------")

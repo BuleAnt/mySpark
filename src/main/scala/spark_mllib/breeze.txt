@@ -1,0 +1,90 @@
+矩阵向量基本操作
+
+
+操作名称 Breeze函数 对应Matlab函数 对应Numpy函数
+
+全0矩阵
+	DenseMatrix.zeros[Double](n,m)
+	zeros(n,m)
+	zeros((n,m))
+全0向量
+	DenseVector.zeros[Double](n)
+	zeros(n)
+	zeros(n)
+全1向量
+	DenseVector.ones[Double](n)
+	ones(n)
+	ones(n)
+
+按数值填充向量
+	DenseVector.fill(n){5.0}
+	ones(n) * 5
+	ones(n) * 5
+生成随机向量
+	DenseVector.range(start,stop,step) orVector.rangeD(start,stop,step)
+
+线性等分向量 (用于产生start,stop之间的N点行矢量)
+	DenseVector.linspace(start,stop,numvals)
+	linspace(0,20,15)
+单位矩阵
+	DenseMatrix.eye[Double](n)
+	eye(n)
+	eye(n)
+对角矩阵
+	diag(DenseVector(1.0,2.0,3.0))
+	diag([1 2 3])
+	diag((1,2,3))
+按照行创建矩阵
+	DenseMatrix((1.0,2.0), (3.0,4.0))
+	[1 2; 3 4]
+	array([ [1,2], [3,4] ])
+按照行创建向量
+	DenseVector(1,2,3,4)
+	[1 2 3 4]
+	array([1,2,3,4])
+向量转置
+	DenseVector(1,2,3,4).t
+	[1 2 3 4]'
+	array([1,2,3]).reshape(-1,1)
+从函数创建向量
+	DenseVector.tabulate(3){i => 2*i}
+从函数创建矩阵
+	DenseMatrix.tabulate(3, 2){case (i, j) =>i+j}
+从数组创建向量
+	new DenseVector(Array(1, 2, 3, 4))
+从数组创建矩阵
+	new DenseMatrix(2, 3, Array(11, 12, 13,21, 22, 23))
+0 到 1的随机向量
+	DenseVector.rand(4)
+0 到 1的随机矩阵
+	DenseMatrix.rand(2,3)
+
+
+
+
+元素访问:
+操作名称 Breeze函数 对应Matlab函数 对应Numpy函数
+指定位置
+	a(0,1)
+	a(1,2)
+	a[0,1]
+向量子集
+	a(1 to 4) or a(1 until 5) ora.slice(1,5)
+	a(2:5)
+	a[1:5]
+按照指定步长取子集
+	a(5 to 0 by -1)
+	a(6:-1:1)
+	a[5:0:-1]
+指定开始位置至结尾
+	a(1 to -1)
+	a(2:end)
+	a[1:]
+最后一个元素
+	a( -1 )
+	a(end)
+	a[-1]
+矩阵指定列
+	a(::, 2)
+	a(:,3)
+	a[:,2]

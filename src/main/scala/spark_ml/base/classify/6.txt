@@ -2,172 +2,175 @@
 输出：分类规则（决策树）
 
 发展历史：
-70年代后期至80年代初期，Quinlan开发了ID3算法（迭代的二分器）
-Quinlan改迚了ID3算法，称为C4.5算法
-1984年，多位统计学家在著名的《Classification and regression tree》书里提出了CART算法
-ID3和CART几乎同期出现，引起了研究决策树算法的旋风，至今已经有多种算法被提出
+	70年代后期至80年代初期，Quinlan开发了ID3算法（迭代的二分器）
+	Quinlan改迚了ID3算法，称为C4.5算法
+	1984年，多位统计学家在著名的《Classification and regression tree》书里提出了CART算法
+	ID3和CART几乎同期出现，引起了研究决策树算法的旋风，至今已经有多种算法被提出
 
 举例
-已知顾客的若干离散信息（如年龄--老中青、收入--高中低、学生---是否、信用等级--优和一般）和是否购买电脑作为分类结果。
-得到期待输出的结果的决策树
+	已知顾客的若干离散信息（如年龄--老中青、收入--高中低、学生---是否、信用等级--优和一般）和是否购买电脑作为分类结果。
+	得到期待输出的结果的决策树
 
 算法的核心问题
-1）该按什么样的次序来选择变量（属性）？  首先选信息含量大的变量和区分性强的变量，使得树比较短，提高分类效率
-数据挖掘：概念与技术（中文第三版）.pdf   P241,8.2.2
-       ID3算法
-首先计算总体期望信息Info（D）：
+	1）该按什么样的次序来选择变量（属性）？
+		首先选信息含量大的变量和区分性强的变量，使得树比较短，提高分类效率
+		数据挖掘：概念与技术（中文第三版）.pdf   P241,8.2.2
+		    ID3算法
+			首先计算总体期望信息Info（D）：
+			再计算按属性A划分的期望信息Info A （D）：
+			再计算信息增益Gain(A):
+		信息增益最大的变量作为第一个变量。
+		信息增益类似于信息论中熵的概念。
 
-再计算按属性A划分的期望信息Info A （D）：
+		得到第一个节点变量后，按其取值再分类，再重复以上ID3计算信息增益的过程即可。
 
-再计算信息增益Gain(A):
+	2）最佳分离点（连续的情形）在哪儿？
+	将连续的变量用阈值区分成离散变量
+	例如，已知样本集中的连续变量age如下，现在需要把age分为2类。
+	  age         相邻age平均值
+	    15
+	                        19
+	    23
+	                        27
+	    31
+	                        38
+	    45
+	                        50
+	    55
+	做法：
+		首先计算 相邻age平均值，然后根据每个平均值做一个属性节点，计算按该节点分成两类的信息增益（例如，小于19岁和大于19岁）。
+		最后统计哪个节点得到的信息增益大，就按该节点作为age阈值，将年龄分为2类。
 
-信息增益最大的变量作为第一个变量。
-信息增益类似于信息论中熵的概念。
+	ID3算法参考:
+		http://blog.csdn.net/acdreamers/article/details/44661149
+		http://www.cnblogs.com/leoo2sk/archive/2010/09/19/decision-tree.html
 
-得到第一个节点变量后，按其取值再分类，再重复以上ID3计算信息增益的过程即可。
+	C4.5算法
+		C4.5是对ID3算法的改进
 
-2）最佳分离点（连续的情形）在哪儿？ 将连续的变量用阈值区分成离散变量
-例如，已知样本集中的连续变量age如下，现在需要把age分为2类。
-  age         相邻age平均值
-    15
-                        19
-    23
-                        27
-    31
-                        38
-    45
-                        50
-    55
-做法：首先计算 相邻age平均值，然后根据每个平均值做一个属性节点，计算按该节点分成两类的信息增益（例如，小于19岁和大于19岁）。最后统计哪个节点得到的信息增益大，就按该节点作为age阈值，将年龄分为2类。
-
-        C4.5算法
-C4.5是对ID3算法的改进
-ID3算法缺陷：信息增益的方法倾向于首先选择因子数较多的变量
-信息增益的改进：增益率
-   首先计算分裂信息
-再计算增益率。
-因子数较多的变量对应的分裂信息也会较大，则其增益率相应会减小。
-取增益率最大的变量作为第一个节点变量。
-
-    CART算法
-数据挖掘：概念与技术（中文第三版）.pdf   P244
-
-使用基尼指数选择变量
-
-剪枝：决策树需要精确逼近，而考虑到决策树学习集的误差，需要去掉某些变量，起到去过拟合和简化树的作用。
-CART算法为后剪枝：先产生完全的决策树，再进行裁剪。不之相对的做法是前剪枝
-剪枝评估方法----代价复杂度：叶节点个数（裁减对象）和树的错误率的函数
-如果剪枝能使代价复杂度下降，则实施之
-剪枝集
-
-CART代价复杂度剪枝
-http://blog.csdn.net/tianguokaka/article/details/9018933
-
-C4.5的悲观剪枝法
-http://blog.csdn.net/zjd950131/article/details/8027081
-R语言实现决策树：rpart扩展包
-举例：以鸢尾花数据集作为算例说明
-> library(rpart)
-> iris.rp=rpart(Species~.,data=iris,method="class")  #对Species变量分类  ，输出 iris.rp是一个决策树类型的变量
-> plot(iris.rp,uniform=T,branch=0,margin=0.1,main="Classification Tree\nIris Species by Petal and Sepal Length")
-> text(iris.rp,use.n=T,fancy=T,col="blue")
+	ID3算法缺陷：信息增益的方法倾向于首先选择因子数较多的变量
+		信息增益的改进：增益率
+		首先计算分裂信息
+		再计算增益率。
+		因子数较多的变量对应的分裂信息也会较大，则其增益率相应会减小。
+		取增益率最大的变量作为第一个节点变量。
 
 
-表示50个setosa品种全部分类正确；有49个versicoclor品种分类正确，5个分类错误，被误判为viginica；有45个viginica品种分类正确，有1个被误判为vesicolor。
+	CART算法
+		数据挖掘：概念与技术（中文第三版）.pdf   P244
+		使用基尼指数选择变量
+
+	剪枝：决策树需要精确逼近，而考虑到决策树学习集的误差，需要去掉某些变量，起到去过拟合和简化树的作用。
+		CART算法为 后剪枝：先产生完全的决策树，再进行裁剪。与之相对的做法是前剪枝
+		剪枝评估方法----代价复杂度：叶节点个数（裁减对象）和树的错误率的函数
+		如果剪枝能使代价复杂度下降，则实施之
+		剪枝集
+		CART代价复杂度剪枝
+			http://blog.csdn.net/tianguokaka/article/details/9018933
+		C4.5的悲观剪枝法
+			http://blog.csdn.net/zjd950131/article/details/8027081
+
+	CART算法参考：
+        http://blog.csdn.net/acdreamers/article/details/44664481
+	R语言实现决策树：rpart扩展包
+		举例：以鸢尾花数据集作为算例说明
+		> library(rpart)
+		> iris.rp=rpart(Species~.,data=iris,method="class")  #对Species变量分类  ，输出 iris.rp是一个决策树类型的变量
+		> plot(iris.rp,uniform=T,branch=0,margin=0.1,main="Classification Tree\nIris Species by Petal and Sepal Length")
+		> text(iris.rp,use.n=T,fancy=T,col="blue")
+		表示:
+			50个setosa品种全部分类正确；
+			有49个versicoclor品种分类正确，5个分类错误，被误判为viginica；
+			有45个viginica品种分类正确，有1个被误判为vesicolor。
 
 怎样评估分类器效能？
-数据挖掘：概念与技术（中文第三版）.pdf   P261
-
+	数据挖掘：概念与技术（中文第三版）.pdf   P261
 
 提升分类器准确率的组合方法
-组合方法包括：装袋（bagging），提升（boosting）和随机森林
+	组合方法包括：装袋（bagging），提升（boosting）和随机森林
 
-基本思路：
-基于学习数据集D抽样产生若干训练子集D1，D2，...，Dk， k一般取奇数，子集数据允许重复。
-使用训练集用某种分类器算法（如贝叶斯、决策树、SVM、线性判别器）分别建模，产生若干分类器M1，M2，...，Mk。
-每个分类器分别进行预测，通过简单选举多数，判定最终所属分类。
+	基本思路：
+		基于学习数据集D抽样产生若干训练子集D1，D2，...，Dk， k一般取奇数，子集数据允许重复。
+		使用训练集用某种分类器算法（如贝叶斯、决策树、SVM、线性判别器）分别建模，产生若干分类器M1，M2，...，Mk。
+		每个分类器分别进行预测，通过简单选举多数，判定最终所属分类。
 
-核心问题：
-1）如何从数据集D中抽样出k个子集。
-2）新的学习集采用什么算法训练出新的分类器
+	核心问题：
+		1）如何从数据集D中抽样出k个子集。
+		2）新的学习集采用什么算法训练出新的分类器
 
+	为什么组合方法能提高分类准确率？
+		当分类器很少时，一般分类平面的几何形状比较简单（为一条直线或一个平面），而有很多方法组合时，分类平面或直线就变得更复杂，能更好地区分样本。
 
-为什么组合方法能提高分类准确率？
-当分类器很少时，一般分类平面的几何形状比较简单（为一条直线或一个平面），而有很多方法组合时，分类平面或直线就变得更复杂，能更好地区分样本。
-
-
-组合算法的优势
-能明显提升判别准确率
-对误差和噪音更加鲁棒性
-一定程度抵消过度拟合
-适合并行化计算
+	组合算法的优势
+		能明显提升判别准确率
+		对误差和噪音更加鲁棒性
+		一定程度抵消过度拟合
+		适合并行化计算
 
 常用组合方法
 1. 装袋算法bagging
 
-抽样方法：有放回抽样，使得前后两次抽样的统计意义下相互独立。
+	抽样方法：有放回抽样，使得前后两次抽样的统计意义下相互独立。
 
-自助样本bootstrap：有放回抽样，抽样个数与原始数据集样本个数相同。
+	自助样本bootstrap：有放回抽样，抽样个数与原始数据集样本个数相同。
 
-优势：
-准确率明显高于组合中任何单个的分类器
-对于较大的噪音，表现丌至于很差，并且具有鲁棒性
-不容易过度拟合
+	优势：
+		准确率明显高于组合中任何单个的分类器
+		对于较大的噪音，表现丌至于很差，并且具有鲁棒性
+		不容易过度拟合
 
 2.提升（boosting）算法
-训练集中的元组被分配权重，之前被正确分类的元组会得到更小的权重。
-权重影响抽样，权重越大，越可能被抽取，也就是说之后会重点训练那些之前被误判的元组。
-迭代训练若干个分类器，在前一个分类器中被错误分类的元组，会被提高权重，使到它在后面建立的分类器里被更加“关注”
-最后分类也是由所有分类器一起投票，投票权重取决于分类器的准确率
+	训练集中的元组被分配权重，之前被正确分类的元组会得到更小的权重。
+	权重影响抽样，权重越大，越可能被抽取，也就是说之后会重点训练那些之前被误判的元组。
+	迭代训练若干个分类器，在前一个分类器中被错误分类的元组，会被提高权重，使到它在后面建立的分类器里被更加“关注”
+	最后分类也是由所有分类器一起投票，投票权重取决于分类器的准确率
 
-Adaboost算法
+	Adaboost算法
 
-
-
-Adaboost优缺点：
-可以获得比bagging更高的准确率
-容易过度拟合
+	Adaboost优缺点：
+		可以获得比bagging更高的准确率
+		容易过度拟合
 
 3.随机森林（Random Forest）算法
-可看成决策树的加强版
-由很多决策树分类器组合而成（因而称为“森林”）
-单个的决策树分类器用随机方法构成。首先，学习集是从原训练集中通过有放回抽样得到的自助样本。其次，参不构建该决策树的变量也是随机抽出，参不变量数通常大大小于可用变量数。
-单个决策树在产生学习集和确定参不变量后，使用CART算法计算，不剪枝
-最后分类结果取决于各个决策树分类器简单多数选举
+	可看成决策树的加强版
+	由很多决策树分类器组合而成（因而称为“森林”）
+	单个的决策树分类器用随机方法构成。首先，学习集是从原训练集中通过有放回抽样得到的自助样本。其次，参不构建该决策树的变量也是随机抽出，参不变量数通常大大小于可用变量数。
+	单个决策树在产生学习集和确定参不变量后，使用CART算法计算，不剪枝
+	最后分类结果取决于各个决策树分类器简单多数选举
 
-优点：
-准确率可以和Adaboost媲美
-对错误和离群点更加鲁棒性
-决策树容易过度拟合的问题会随着森林规模而削弱
-在大数据情况下速度快，性能好
+	优点：
+		准确率可以和Adaboost媲美
+		对错误和离群点更加鲁棒性
+		决策树容易过度拟合的问题会随着森林规模而削弱
+		在大数据情况下速度快，性能好
 
-R的randomForest包
-举例
-#随机森林
-> library(randomForest)
-randomForest 4.6-12
-Type rfNews() to see new features/changes/bug fixes.
-Warning message:
-程辑包‘randomForest’是用R版本3.3.0 来建造的
-> model.forest<-randomForest(Species~.,data=iris)
-> pre.forest=predict(model.forest,iris)
-> table(pre.forest,iris$Species)
+	R的randomForest包
+	举例
+		#随机森林
+		> library(randomForest)
+		randomForest 4.6-12
+		Type rfNews() to see new features/changes/bug fixes.
+		Warning message:
+		程辑包‘randomForest’是用R版本3.3.0 来建造的
+		> model.forest<-randomForest(Species~.,data=iris)
+		> pre.forest=predict(model.forest,iris)
+		> table(pre.forest,iris$Species)
 
-pre.forest   setosa versicolor virginica
-  setosa         50          0         0
-  versicolor      0         50         0
-  virginica       0          0        50
+		pre.forest   setosa versicolor virginica
+		  setosa         50          0         0
+		  versicolor      0         50         0
+		  virginica       0          0        50
 
-#对比原始决策树
-> library(rpart)
-> model.tree=rpart(Species~.,data=iris,method='class')
-> pre.tree=predict(model.tree,data=iris,type='class')
-> table(pre.tree,iris$Species)
+		#对比原始决策树
+		> library(rpart)
+		> model.tree=rpart(Species~.,data=iris,method='class')
+		> pre.tree=predict(model.tree,data=iris,type='class')
+		> table(pre.tree,iris$Species)
 
-pre.tree     setosa versicolor virginica
-  setosa         50          0         0
-  versicolor      0         49         5
-  virginica       0          1        45
+		pre.tree     setosa versicolor virginica
+		  setosa         50          0         0
+		  versicolor      0         49         5
+		  virginica       0          1        45
 
 
 参考:
