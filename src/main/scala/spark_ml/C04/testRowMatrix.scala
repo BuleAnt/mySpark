@@ -8,7 +8,7 @@ val conf = new SparkConf()                                       //创建环境�
 .setMaster("local")                                               //设置本地化处理
 .setAppName("testRowMatrix")                                    //设定名称
     val sc = new SparkContext(conf)                                   //创建环境变量实例
-    val rdd = sc.textFile("c://2.txt")                                     //创建RDD文件路径
+    val rdd = sc.textFile("c://2LinearRegression.txt")                                     //创建RDD文件路径
       .map(_.split(' ')                                                //按“ ”分割
       .map(_.toDouble))                                             //转成Double类型
       .map(line => Vectors.dense(line))                                //转成Vector格式

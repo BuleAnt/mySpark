@@ -10,7 +10,7 @@ object irisLogicRegression {
   //设定名称
   val sc = new SparkContext(conf)
   //创建环境变量实例
-  val data = sc.textFile("c:/2.txt")
+  val data = sc.textFile("c:/2LinearRegression.txt")
   //读取数据
   val parsedData = data.map { line => //处理数据
     val parts = line.split('	') //按空格分割

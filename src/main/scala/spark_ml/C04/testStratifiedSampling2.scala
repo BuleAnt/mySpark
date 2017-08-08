@@ -8,7 +8,7 @@ object testStratifiedSampling2 {
     //设定名称
     val sc = new SparkContext(conf)
     //创建环境变量实例
-    val data = sc.textFile("c://2.txt") //读取数据
+    val data = sc.textFile("c://2LinearRegression.txt") //读取数据
       .map(row => {
       //开始处理
       if (row.length == 3) //判断字符数

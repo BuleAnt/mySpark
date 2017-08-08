@@ -13,7 +13,7 @@ object irisBayes {
     //设定名称
     val sc = new SparkContext(conf)
     //创建环境变量实例
-    val data = MLUtils.loadLabeledPoints(sc, "c://2.txt")
+    val data = MLUtils.loadLabeledPoints(sc, "c://2LinearRegression.txt")
     //读取数据集
     val model = NaiveBayes.train(data, 1.0)
     //训练贝叶斯模型

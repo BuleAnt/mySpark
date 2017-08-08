@@ -9,7 +9,7 @@ object word2Vec {
     //设定名称
     val sc = new SparkContext(conf)
     //创建环境变量实例
-    val documents = sc.textFile("c://2.txt").map(_.split(" ").toSeq) //读取数据文件
+    val documents = sc.textFile("c://2LinearRegression.txt").map(_.split(" ").toSeq) //读取数据文件
 
     val word2vec = new Word2Vec()
     //创建词向量实例
