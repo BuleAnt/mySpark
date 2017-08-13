@@ -175,3 +175,28 @@
 
 参考:
 http://f.dataguru.cn/thread-607577-1-1.html
+信息论
+http://www.cnblogs.com/zhangchaoyang/articles/2655785.html
+信息熵推导
+http://blog.csdn.net/carmazhao/article/details/7108170
+ID3和C4.5
+http://www.cnblogs.com/pinard/p/6050306.html
+http://blog.csdn.net/u014688145/article/details/53212112
+ID3 java实现
+http://www.cnblogs.com/zhangchaoyang/articles/2196631.html
+
+C4.5
+http://www.cnblogs.com/zhangchaoyang/articles/2842490.html
+CART和剪枝
+http://www.cnblogs.com/pinard/p/6053344.html
+http://www.cnblogs.com/zhangchaoyang/articles/2709922.html
+CART算法的原理Gini不纯度(系数)demo
+http://blog.csdn.net/acdreamers/article/details/44664481
+
+集成学习(ensemble learning) boosting算法+bagging算法
+http://www.cnblogs.com/pinard/p/6131423.html
+集成学习Adaboost提升算法
+http://blog.csdn.net/u014688145/article/details/55657501
+http://www.cnblogs.com/pinard/p/6133937.html
+GBDT梯度提升树
+http://www.cnblogs.com/pinard/p/6140514.html

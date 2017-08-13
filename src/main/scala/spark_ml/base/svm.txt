@@ -1,7 +1,0 @@
-参考:
-关于支持向量机：http://www.cnblogs.com/LeftNotEa ... /05/18/2034566.html
-关于拉格朗日乘子法：http://blog.csdn.net/xianlingmao/article/details/7919597
-关于KKT条件：http://hi.baidu.com/grandyang/item/94cd68dfdc06941e21e25099
-求解凸优化问题的斱法：http://wenku.baidu.com/link?url= ... KExJtvVTS3Uj4S68UpG
-
-http://f.dataguru.cn/thread-611098-1-1.html

@@ -1,4 +1,23 @@
 export MAVEN_OPTS="-Xmx2g -XX:ReservedCodeCacheSize=512m -XX:MaxPermSize=512M"
 ./build/mvn -Pyarn -Phadoop-2.4 -Dhadoop.version=2.5.2 -DskipTests clean package
 ./make-distribution.sh --tgz --name 2.6.0 -Pyarn -Phadoop-2.4 -Phive
-./dev/make-distribution.sh --name custom-spark --tgz -Psparkr -Phadoop-2.4 -Dhadoop.version=2.5.2  -Phive -Phive-thriftserver -Pyarn -Dscala-2.11 -DskipTests clean package
+
+./dev/change-scala-version.sh 2.10
+
+./dev/make-distribution.sh --name custom-spark --tgz -Psparkr -Phadoop-2.4 -Dhadoop.version=2.5.2 -Phive -Phive-thriftserver -Pyarn -DskipTests clean package
+
+/usr/local/java/jdk1.8.0_91
+./dev/change-scala-version.sh 2.11
+./dev/make-distribution.sh --name custom-spark --pip --r --tgz -Psparkr -Phadoop-2.4 -Phive -Phive-thriftserver -Pyarn -Dscala-2.11 -DskipTests clean package
+
+./dev/make-distribution.sh --help
+usage:
++ cl_options='[--name] [--tgz] [--pip] [--r] [--mvn <mvn-command>]'
++ echo 'make-distribution.sh [--name] [--tgz] [--pip] [--r] [--mvn <mvn-command>] <maven build options>'
+make-distribution.sh [--name] [--tgz] [--pip] [--r] [--mvn <mvn-command>] <maven build options>
++ echo 'See Spark'\''s "Building Spark" doc for correct Maven options.'
+See Spark's "Building Spark" doc for correct Maven options.
++ echo ''
+
+
+./dev/make-distribution.sh --name custom-spark --pip --r --tgz -Psparkr -Phadoop-2.7 -Phive -Phive-thriftserver -Pmesos -Pyarn -Dhadoop.version=2.5.2 -Dscala-2.11 -DskipTests clean package

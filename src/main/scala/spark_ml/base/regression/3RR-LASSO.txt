@@ -218,6 +218,9 @@ http://blog.csdn.net/sinat_16233463/article/details/37363183
 http://www.cnblogs.com/zgw21cn/archive/2008/12/24/1361287.html
 线性回归、岭回归和LASSO回归
 http://www.cnblogs.com/Deribs4/p/4947781.html
+Ridge Regression岭回归理解
+http://www.cnblogs.com/zhangchaoyang/articles/2802806.html
+
 多元线性模型与岭回归分析
 http://www.doc88.com/p-3367183702332.html
 http://wiki.mbalib.com/wiki/多元线性回归分析预测法
@@ -225,3 +228,5 @@ http://wiki.mbalib.com/wiki/多元线性回归分析预测法
 http://blog.csdn.net/mousever/article/details/50513508
 lasso算法及其实现
 http://blog.csdn.net/mousever/article/details/50513409
+Lasso回归算法： 坐标轴下降法与最小角回归法
+http://www.cnblogs.com/pinard/p/6018889.html

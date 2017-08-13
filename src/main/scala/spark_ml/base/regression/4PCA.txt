@@ -200,8 +200,21 @@ http://f.dataguru.cn/thread-601166-1-1.html
 http://blog.csdn.net/ShiZhixin/article/details/51181379
 http://blog.sina.com.cn/s/blog_3f738ee00102vakz.html
 http://www.cnblogs.com/pinard/p/6239403.html
+http://blog.jobbole.com/109015/
 基础知识:
 协方差矩阵:
 http://www.cnblogs.com/chaosimple/p/3182157.html
 http://blog.csdn.net/itplus/article/details/11452743
+http://www.cnblogs.com/nsnow/p/4758202.html
+因子分析:
+http://www.cnblogs.com/jerrylead/archive/2011/05/11/2043317.html
 
+主成分分析
+http://www.cnblogs.com/pinard/p/6239403.html
+http://www.cnblogs.com/zhangchaoyang/articles/2222048.html
+LDA(回归与分类结合,见下章现行判别法)
+http://www.cnblogs.com/zhangchaoyang/articles/2644095.html
+http://blog.csdn.net/ffeng271/article/details/7353834
+http://www.cnblogs.com/engineerLF/p/5393119.html
+lda与pca比较
+http://www.cnblogs.com/viviancc/p/4133630.html
