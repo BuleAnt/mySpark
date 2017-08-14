@@ -1,0 +1,16 @@
+关于推荐书籍
+https://www.zhihu.com/question/22221180
+
+Rachel Zhang的专栏
+http://blog.csdn.net/abcjennifer/article/details/53428053
+
+姜文晖的博客
+http://blog.csdn.net/jwh_bupt?viewmode=contents
+
+
+我爱机器学习
+https://www.52ml.net/
+
+《统计学习方法》李航
+这个学科所涉及到得领域非常非常广，个人认为要打好数学基础，并且会用R、Matlab等一些语言及工具。
+
