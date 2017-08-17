@@ -14,3 +14,6 @@ https://www.52ml.net/
 《统计学习方法》李航
 这个学科所涉及到得领域非常非常广，个人认为要打好数学基础，并且会用R、Matlab等一些语言及工具。
 
+
+http://blog.csdn.net/q361239731/article/details/53560339
+

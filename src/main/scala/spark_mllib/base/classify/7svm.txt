@@ -146,7 +146,30 @@ R中实验SVM
 	+ col= as.integer(iris[,5]),
 	+ pch= c("o","+")[1:150 %in% model$index+ 1])
 
-svm系列
+
+
+JerryLead 支持向量机
+	支持向量机SVM（一） 逻辑回归 感知器 平面间距 函数间距
+	http://www.cnblogs.com/jerrylead/archive/2011/03/13/1982639.html
+	支持向量机SVM（二） 拉格朗日对偶（Lagrange duality）
+	http://www.cnblogs.com/jerrylead/archive/2011/03/13/1982684.html
+	支持向量机（三）核函数 (理解核函数很有帮助)
+	http://www.cnblogs.com/jerrylead/archive/2011/03/18/1988406.html
+	支持向量机（四）软间隔 规则化和不可分情况处理（Regularization and the non-separable case）
+	http://www.cnblogs.com/jerrylead/archive/2011/03/18/1988415.html
+	支持向量机（五）SMO算法（Sequential minimal optimization）
+	http://www.cnblogs.com/jerrylead/archive/2011/03/18/1988419.html
+
+july 支持向量机通俗导论（理解SVM的三层境界）
+	http://blog.csdn.net/v_july_v/article/details/7624837
+	转载版
+	http://www.cnblogs.com/wangduo/p/5337466.html
+	SVM原理 详细介绍(推荐仔细阅读,帮助理解)
+	http://blog.csdn.net/u014688145/article/details/52906162
+	http://blog.csdn.net/u014688145/article/details/52943923
+	http://blog.csdn.net/u014688145/article/details/52963915
+
+刘建平pinard svm系列
 	线性支持向量机
 	http://www.cnblogs.com/pinard/p/6097604.html
 	线性支持向量机的软间隔最大化模型
@@ -157,15 +180,12 @@ svm系列
 	http://www.cnblogs.com/pinard/p/6111471.html
 	线性支持回归
 	http://www.cnblogs.com/pinard/p/6113120.html
-svm支持向量机高斯核调参
-http://www.cnblogs.com/pinard/p/6126077.html
-SVM原理
-http://blog.csdn.net/u014688145/article/details/52906162
-http://blog.csdn.net/u014688145/article/details/52943923
-svm实现
-http://blog.csdn.net/u014688145/article/details/52963915
+	svm支持向量机高斯核调参
+	http://www.cnblogs.com/pinard/p/6126077.html
 
-http://blog.csdn.net/v_july_v/article/details/7624837
+约束最优化问题求解：拉格朗日乘子法和KKT条件
+	http://blog.csdn.net/dawnranger/article/details/53133450
+
 
 
 参考:
@@ -175,3 +195,20 @@ http://blog.csdn.net/v_july_v/article/details/7624837
 求解凸优化问题的斱法：http://wenku.baidu.com/link?url= ... KExJtvVTS3Uj4S68UpG
 
 http://f.dataguru.cn/thread-611098-1-1.html
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
