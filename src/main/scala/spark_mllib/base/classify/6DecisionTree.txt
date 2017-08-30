@@ -193,10 +193,14 @@ http://www.cnblogs.com/zhangchaoyang/articles/2709922.html
 CART算法的原理Gini不纯度(系数)demo
 http://blog.csdn.net/acdreamers/article/details/44664481
 
+模型组合Boosting与Gradient Boosting
+http://www.cnblogs.com/LeftNotEasy/archive/2011/01/02/machine-learning-boosting-and-gradient-boosting.html
+决策树模型组合之随机森林与GBDT
+http://www.cnblogs.com/LeftNotEasy/archive/2011/03/07/random-forest-and-gbdt.html
 集成学习(ensemble learning) boosting算法+bagging算法
 http://www.cnblogs.com/pinard/p/6131423.html
-http://blog.csdn.net/v_july_v/article/details/40718799
 集成学习Adaboost提升算法
+http://blog.csdn.net/v_july_v/article/details/40718799
 http://blog.csdn.net/u014688145/article/details/55657501
 http://www.cnblogs.com/pinard/p/6133937.html
 GBDT梯度提升树

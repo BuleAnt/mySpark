@@ -1,0 +1,85 @@
+协同过滤
+http://www.cnblogs.com/pinard/p/6349233.html
+关联算法做协同过滤
+	频繁集挖掘，找到满足支持度阈值的关联物品的频繁N项集或者序列。
+	将频繁项集或序列里的其他物品按一定的评分准则推荐给用户，这个评分准则可以包括支持度，置信度和提升度等
+	Apriori
+	http://www.cnblogs.com/pinard/p/6293298.html
+	FP Tree算法
+	http://www.cnblogs.com/pinard/p/6307064.html
+	PrefixSpan算法
+	http://www.cnblogs.com/pinard/p/6323182.html
+
+聚类算法做协同过滤
+	基于用户或者项目的协同过滤
+	K-Means,
+	http://www.cnblogs.com/pinard/p/6164214.html
+	BIRCH,
+	http://www.cnblogs.com/pinard/p/6179132.html
+	DBSCAN
+	http://www.cnblogs.com/pinard/p/6208966.html
+	谱聚类
+	http://www.cnblogs.com/pinard/p/6221564.html
+
+分类算法做协同过滤
+	根据用户评分的高低，将分数分成几段
+	逻辑回归
+	http://www.cnblogs.com/pinard/p/6029432.html
+	朴素贝叶斯
+	http://www.cnblogs.com/pinard/p/6069267.html
+
+回归算法做协同过滤
+	评分可以是一个连续的值而不是离散的值，通过回归模型我们可以得到目标用户对物品的预测打分
+	线性回归
+		http://www.cnblogs.com/pinard/p/6004041.html
+	决策树算法
+		http://www.cnblogs.com/pinard/p/6053344.html
+	支持向量机原理(五)线性支持回归
+		http://www.cnblogs.com/pinard/p/6113120.html
+
+矩阵分解做协同过滤
+	目前使用也很广泛的一种方法
+		传统的奇异值分解SVD要求矩阵不能有缺失数据，必须是稠密的，
+		而我们的用户物品评分矩阵是一个很典型的稀疏矩阵，直接使用传统的SVD到协同过滤是比较复杂的。
+	目前主流的矩阵分解推荐算法主要是SVD的一些变种，比如FunkSVD，BiasSVD和SVD++。
+	这些算法和传统SVD的最大区别是不再要求将矩阵分解为UΣVT的形式，而变是两个低秩矩阵PTQ的乘积形式。
+
+
+理论基础:
+	奇异值分解(SVD)原理与在降维中的应用
+	http://www.cnblogs.com/pinard/p/6251584.html
+	矩阵分解:
+	http://www.cnblogs.com/pinard/p/6351319.html
+
+ALS
+	http://www.cnblogs.com/txq157/p/6111593.html
+	http://www.csdn.net/article/2015-05-07/2824641
+	http://blog.csdn.net/oucpowerman/article/details/49847979
+	http://blog.csdn.net/antkillerfarm/article/details/53734658
+	http://snglw.blog.51cto.com/5832405/1662153
+
+
+
+开发者数据监控平台
+新流处理spark streaming平台构建,原业务处理流程改造,减小了失败率
+大数据开发
+
+
+山西移动用户行为分析平台搭建
+构建flume,hadoop,hive,azkaban集群,部署用户行为分析工程
+
+应用推荐系统
+通过mr,hive sql完成数据预处理,实现基于物品协同过滤
+
+
+智慧服务
+构建spark集群,通过spark以极高的效率完成智慧服务标签数据解析与获取
+
+报文查询
+报文查询代码重新实现,优化elasticsearch完成页面展示与查询
+
+报表迁移spark
+结合spark与azkaban完成原来hive处理的定时任务迁移,极大优化了数据分析效率
+
+订单中心后台
+改造老订单中心后台,结合spark完成数据明细的可视化与定制化查询

@@ -146,9 +146,17 @@ R中实验SVM
 	+ col= as.integer(iris[,5]),
 	+ pch= c("o","+")[1:150 %in% model$index+ 1])
 
+基础知识:
+还是先理解一下拉格朗日对偶问题和kkt
+	这篇博客通俗易懂,帮助理解
+	http://www.cnblogs.com/90zeng/p/Lagrange_duality.html
+
+
 
 
 JerryLead 支持向量机
+	感知机模型
+	http://www.cnblogs.com/pinard/p/6042320.html
 	支持向量机SVM（一） 逻辑回归 感知器 平面间距 函数间距
 	http://www.cnblogs.com/jerrylead/archive/2011/03/13/1982639.html
 	支持向量机SVM（二） 拉格朗日对偶（Lagrange duality）
@@ -176,7 +184,7 @@ july 支持向量机通俗导论（理解SVM的三层境界）
 	http://www.cnblogs.com/pinard/p/6100722.html
 	线性不可分支持向量机与核函数
 	http://www.cnblogs.com/pinard/p/6103615.html
-	SMO算法原理
+	SMO算法原理 序列最小最优化算法
 	http://www.cnblogs.com/pinard/p/6111471.html
 	线性支持回归
 	http://www.cnblogs.com/pinard/p/6113120.html
@@ -186,6 +194,8 @@ july 支持向量机通俗导论（理解SVM的三层境界）
 约束最优化问题求解：拉格朗日乘子法和KKT条件
 	http://blog.csdn.net/dawnranger/article/details/53133450
 
+SMO算法
+http://www.cnblogs.com/vivounicorn/archive/2011/06/01/2067496.html
 
 
 参考:
@@ -195,20 +205,4 @@ july 支持向量机通俗导论（理解SVM的三层境界）
 求解凸优化问题的斱法：http://wenku.baidu.com/link?url= ... KExJtvVTS3Uj4S68UpG
 
 http://f.dataguru.cn/thread-611098-1-1.html
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

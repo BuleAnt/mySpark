@@ -156,6 +156,7 @@ http://f.dataguru.cn/thread-604812-1-1.html
 距离判别法KNN算法
 http://www.cnblogs.com/pinard/p/6061661.html
 朴素贝叶斯:
+http://mindhacks.cn/2008/09/21/the-magical-bayesian-method/
 http://www.cnblogs.com/pinard/p/6069267.html
 http://www.cnblogs.com/luonet/p/4028990.html
 http://blog.csdn.net/amds123/article/details/70173402
