@@ -58,7 +58,22 @@ ALS
 	http://blog.csdn.net/antkillerfarm/article/details/53734658
 	http://snglw.blog.51cto.com/5832405/1662153
 
-
+spark推荐:
+	http://www.cnblogs.com/pinard/p/6364932.html
+	http://blog.csdn.net/cheng9981/article/details/70142900
+	http://blog.csdn.net/sctu_vroy/article/details/52957158
+	http://www.cnblogs.com/muchen/p/6882465.html
+	http://blog.csdn.net/qq1010885678/article/details/46675501
+	http://blog.csdn.net/wangqi880/article/details/52883455
+	http://www.cnblogs.com/ksWorld/p/6808092.html
+	# spark 2.0 新
+	http://blog.csdn.net/wangqi880/article/details/52923356
+	# spark fp关联
+	http://blog.csdn.net/wangqi880/article/details/52910078
+案例:
+	美团推荐算法实践:
+	https://tech.meituan.com/mt-recommend-practice.html
+	http://blog.csdn.net/wangqi880/article/details/49838619
 
 开发者数据监控平台
 新流处理spark streaming平台构建,原业务处理流程改造,减小了失败率

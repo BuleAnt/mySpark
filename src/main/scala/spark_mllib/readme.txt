@@ -17,3 +17,7 @@ https://www.52ml.net/
 
 http://blog.csdn.net/q361239731/article/details/53560339
 
+spark sklearn ml
+http://blog.csdn.net/qq_34531825/article/category/6382630/1
+http://blog.csdn.net/cheng9981/article/category/6736612
+http://blog.csdn.net/liulingyuan6/article/category/6547184
