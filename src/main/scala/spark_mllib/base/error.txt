@@ -10,3 +10,4 @@ http://www.cnblogs.com/nxld/p/6058782.html
 
 斯坦福大学机器学习——交叉验证（Cross Validation）
 http://blog.csdn.net/linkin1005/article/details/42869331
+

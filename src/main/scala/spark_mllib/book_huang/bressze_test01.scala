@@ -12,7 +12,7 @@ object bressze_test01 {
 
   def main(args: Array[String]): Unit = {
 
-    val conf = new SparkConf().setAppName("breeze_test01")
+    /*val conf = new SparkConf().setAppName("breeze_test01")
     val sc = new SparkContext(conf)
     Logger.getRootLogger.setLevel(Level.WARN)
 
@@ -155,6 +155,6 @@ object bressze_test01 {
     ceil(a_7) // 小数进1
     floor(a_7) // 小数略为0
     signum(a_7) // 符号函数
-    abs(a_7) // 绝对值
+    abs(a_7) // 绝对值*/
   }
 }

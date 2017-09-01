@@ -17,3 +17,7 @@ PV点击日志 t_ods_f_client_clieck
 15	备注4	    REMARK4	   <=50 	N	N
 16	承载主机IP地址	BIZ_HOSTIP	<=100	Y	处理当前业务应用程序的主机IP地址		
 17	承载节点名称	BIZ_PROECESS	<=100	Y	处理当前业务应用程序的节点名称		
+
+
+
+点击时间,用户号码,客户端版本,客户端类型,title名称,菜单ID,类型,入口位置名称,目标URL

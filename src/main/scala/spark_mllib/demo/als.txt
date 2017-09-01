@@ -1,0 +1,16 @@
+http://www.cnblogs.com/NaughtyBaby/p/5469469.html
+数据:
+http://files.grouplens.org/datasets/movielens/
+
+修改 ~/.bashrc 文件，添加以下内容：
+
+#export PYSPARK_DRIVER_PYTHON=ipython2 # As pyspark only works with python2 and not python3
+export PYSPARK_DRIVER_PYTHON=jupyter
+export PYSPARK_DRIVER_PYTHON_OPTS="notebook --pylab inline"
+
+python --pylab
+启动 pyspark
+# ipython中配置spark
+
+http://www.cnblogs.com/Cherise/p/4351022.html
+http://www.cnblogs.com/mooba/p/6539142.html
