@@ -182,24 +182,21 @@
 
 参考:
 http://f.dataguru.cn/thread-596270-1-1.html
-
-虚拟变量 哑变量:
-https://wenku.baidu.com/view/02bac09ca58da0116c1749de.html
-http://blog.csdn.net/mousever/article/details/50500205
-用R语言做正态分布检验
-http://blog.csdn.net/mousever/article/details/51419077
-
-
-回归结果的一般解释
-http://blog.csdn.net/mousever/article/details/50511808
+	虚拟变量 哑变量:
+	https://wenku.baidu.com/view/02bac09ca58da0116c1749de.html
+	http://blog.csdn.net/mousever/article/details/50500205
+	用R语言做正态分布检验
+	http://blog.csdn.net/mousever/article/details/51419077
+	回归结果的一般解释
+	http://blog.csdn.net/mousever/article/details/50511808
 
 最小二乘法
 http://www.cnblogs.com/pinard/p/5976811.html
 梯度下降法
-http://www.cnblogs.com/pinard/p/5970503.html
-梯度下降法的三种形式BGD、SGD以及MBGD
-http://www.cnblogs.com/maybe2030/p/5089753.html
-http://blog.csdn.net/chenzhi1992/article/details/52850759
+	http://www.cnblogs.com/pinard/p/5970503.html
+	梯度下降法的三种形式BGD、SGD以及MBGD
+	http://www.cnblogs.com/maybe2030/p/5089753.html
+	http://blog.csdn.net/chenzhi1992/article/details/52850759
 
 回归与梯度下降
 http://www.cnblogs.com/LeftNotEasy/archive/2010/12/05/mathmatic_in_machine_learning_1_regression_and_gradient_descent.html
@@ -208,10 +205,14 @@ http://www.cnblogs.com/pinard/p/6004041.html
 相性回归与最小二乘,最大似然
 http://www.cnblogs.com/LeftNotEasy/archive/2010/12/19/mathmatic_in_machine_learning_2_regression_and_bias_variance_trade_off.html
 
-逻辑回归原理
-http://www.cnblogs.com/pinard/p/6029432.html
-逻辑斯蒂回归物理意义
-http://blog.csdn.net/u014688145/article/details/53608203
+
+逻辑回归
+	http://www.cnblogs.com/pinard/p/6029432.html
+	http://blog.csdn.net/pakko/article/details/37878837/
+	逻辑斯蒂回归物理意义
+	http://blog.csdn.net/u014688145/article/details/53608203
+
+
 回归分析概述
 http://www.cnblogs.com/zhangchaoyang/articles/2644095.html
 独立性检验

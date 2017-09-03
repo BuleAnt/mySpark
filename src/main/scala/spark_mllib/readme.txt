@@ -21,7 +21,8 @@ http://blog.csdn.net/q361239731/article/details/53560339
 spark sklearn ml
 http://blog.csdn.net/qq_34531825/article/category/6382630/1
 http://blog.csdn.net/cheng9981/article/category/6736612
-http://blog.csdn.net/liulingyuan6/article/category/6547184
-
 http://www.cnblogs.com/maybe2030/category/697574.html
 http://www.cnblogs.com/90zeng/category/602695.html
+Spark MLlib
+http://blog.csdn.net/liulingyuan6/article/category/6547184
+

@@ -1,0 +1,24 @@
+ROC和AUC介绍以及如何计算AUC
+http://alexkong.net/2013/06/introduction-to-auc-and-roc/
+CTR点击率预估干货分享
+http://blog.csdn.net/bitcarmanlee/article/details/52138970
+CTR预估算法小结
+http://blog.csdn.net/bitcarmanlee/article/details/52138713
+
+因子分解机FM算法详解
+http://blog.csdn.net/bitcarmanlee/article/details/52143909
+DNN CTR预估模型
+http://www.cnblogs.com/zhizhan/p/5734500.html
+深入理解FFM原理与实践
+http://geek.csdn.net/news/detail/59793
+DSP模型中FM FFM模型
+http://blog.csdn.net/xiaomuworld/article/details/51956051
+深入FFM原理与实践
+https://tech.meituan.com/deep-understanding-of-ffm-principles-and-practices.html
+http://blog.csdn.net/lilyth_lilyth/article/details/48032119
+
+
+
+spark GBDT
+http://blog.csdn.net/liulingyuan6/article/details/53426350
+http://blog.csdn.net/liulingyuan6/article/details/53467675
