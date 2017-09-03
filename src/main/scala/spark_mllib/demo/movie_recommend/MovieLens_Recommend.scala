@@ -1,7 +1,4 @@
-package spark_mllib.demo
-
-
-import org.apache.spark.{SparkConf, SparkContext}
+package spark_mllib.demo.movie_recommend;
 
 /**
   * 基于ALS矩阵分解算法的Spark推荐引擎实现。

@@ -208,7 +208,14 @@ http://blog.csdn.net/v_july_v/article/details/40718799
 http://blog.csdn.net/u014688145/article/details/55657501
 http://www.cnblogs.com/pinard/p/6133937.html
 GBDT梯度提升树
-http://www.cnblogs.com/pinard/p/6140514.html
+	http://www.cnblogs.com/pinard/p/6140514.html
+	http://blog.csdn.net/w28971023/article/details/8133929
+	模型组合(Model Combining)之Boosting与Gradient Boosting
+	http://www.cnblogs.com/LeftNotEasy/archive/2011/01/02/machine-learning-boosting-and-gradient-boosting.html
+	决策树模型组合之GBDT（Gradient Boost Decision Tree）
+	http://www.cnblogs.com/misszhu-home/p/5628479.html
+	http://www.jianshu.com/p/005a4e6ac775
+
 
 统计学习方法——CART, Bagging, Random Forest, Boosting
 http://blog.csdn.net/abcjennifer/article/details/8164315
