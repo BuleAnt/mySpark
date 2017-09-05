@@ -17,8 +17,14 @@ http://blog.csdn.net/xiaomuworld/article/details/51956051
 https://tech.meituan.com/deep-understanding-of-ffm-principles-and-practices.html
 http://blog.csdn.net/lilyth_lilyth/article/details/48032119
 
+基于spark的ctr预估离线流程
+xxxx
 
+Spark MLlib实现的广告点击预测–Gradient-Boosted Trees
+http://www.xueqing.tv/cms/article/119
 
 spark GBDT
 http://blog.csdn.net/liulingyuan6/article/details/53426350
 http://blog.csdn.net/liulingyuan6/article/details/53467675
+
+spark itemcf

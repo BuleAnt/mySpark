@@ -1,0 +1,55 @@
+学习参考:
+http://blog.csdn.net/u010859707/article/details/73293906
+运行spark错误参考:
+http://blog.csdn.net/lsshlsw/article/details/53768756
+http://blog.csdn.net/dax1n/article/details/57079534
+
+Caused by: java.lang.NoSuchMethodError: org.apache.hadoop.fs.FSOutputSummer.<init>(Ljava/util/zip/Checksum;II
+ls hadoop*
+rm hadoop-annotations-2.6.0.jar
+rm hadoop-auth-2.6.0.jar
+rm hadoop-common-2.6.0.jar
+cp $SPARK_HOME/jars/hadoop-annotations-*.jar ./
+cp $SPARK_HOME/jars/hadoop-auth-*.jar ./
+cp $SPARK_HOME/jars/hadoop-common-*.jar ./
+
+Caused by: com.fasterxml.jackson.databind.JsonMappingException: Jackson version is too old 2.5.3
+ls jackson*
+rm jackson-annotations-2.5.0.jar
+rm jackson-core-2.5.3.jar
+rm jackson-databind-2.5.3.jar
+cp $SPARK_HOME/jars/jackson-databind-2.6.5.jar ./
+cp $SPARK_HOME/jars/jackson-core-2.6.5.jar ./
+cp $SPARK_HOME/jars/jackson-annotations-2.6.5.jar ./
+
+
+# 编译
+git clone https://github.com/apache/zeppelin.git
+export MAVEN_OPTS="-Xmx2g -XX:ReservedCodeCacheSize=512m -Xmx2g -XX:MaxPermSize=1024m"
+./dev/change_scala_version.sh 2.11
+mvn clean package -DskipTests -Pspark-2.0 -Phadoop-2.4 -Pyarn -Ppyspark -Psparkr -Pr -Pscala-2.11
+-Dmaven.test.skip=true
+mvn clean package -DskipTests -Dcobertura.skip=true -Pspark-2.1 -Phadoop-2.4 -Ppyspark -Psparkr -Pscala-2.11 -Pbuild-distr
+-Dmaven.findbugs.enable=false -Drat.skip=true -Dcheckstyle.skip=true -Denforcer.skip=true
+-DskipTests -X
+#不生效项
+-Pyarn -Pr -Dhadoop.version=2.5.2
+选项:
+-Pspark-2.1
+-Pspark-2.0
+-Pspark-1.6
+-Pspark-1.5
+-Pspark-1.4
+-Pcassandra-spark-1.5
+-Pcassandra-spark-1.4
+-Pcassandra-spark-1.3
+-Pcassandra-spark-1.2
+-Pcassandra-spark-1.1
+
+-Phadoop-0.23
+-Phadoop-1
+-Phadoop-2.2
+-Phadoop-2.3
+-Phadoop-2.4
+-Phadoop-2.6
+-Phadoop-2.7

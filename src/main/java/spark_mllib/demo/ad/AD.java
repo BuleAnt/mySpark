@@ -4,6 +4,11 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
+import org.apache.spark.ml.Pipeline;
+import org.apache.spark.ml.PipelineModel;
+import org.apache.spark.ml.PipelineStage;
+import org.apache.spark.ml.classification.LogisticRegression;
+import org.apache.spark.ml.feature.*;
 import org.apache.spark.rdd.RDD;
 import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.Row;
@@ -13,6 +18,7 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -173,6 +179,10 @@ public class AD {
 		 *  最后，可以将模型保存下来，下次直接使用就可以了：
 		 */
 		String pModlePath = "file:\\D:\\dac_sample\\";
-		pModle.save(pModlePath);
+		try {
+			pModle.save(pModlePath);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }

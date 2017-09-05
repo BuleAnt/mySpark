@@ -1,0 +1,12 @@
+大众点评数据
+https://pan.baidu.com/s/1qYRM2cs twa7
+
+criteo abs kaggle数据
+https://pan.baidu.com/s/1qYVhaJq 8fyn
+
+Owen Zhang
+https://github.com/owenzhang/kaggle-avazu
+https://www.kaggle.com/c/avazu-ctr-prediction
+
+FM/FFM
+https://tech.meituan.com/deep-understanding-of-ffm-principles-and-practices.html

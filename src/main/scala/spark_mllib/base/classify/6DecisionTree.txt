@@ -218,6 +218,9 @@ GBDT梯度提升树
 	决策树模型组合之GBDT（Gradient Boost Decision Tree）
 	http://www.cnblogs.com/misszhu-home/p/5628479.html
 	http://www.jianshu.com/p/005a4e6ac775
+	GBDT原理-Gradient Boosting Decision Tree
+	http://blog.csdn.net/shine19930820/article/details/65633436
+	http://www.lai18.com/content/1406280.html
 
 
 统计学习方法——CART, Bagging, Random Forest, Boosting
