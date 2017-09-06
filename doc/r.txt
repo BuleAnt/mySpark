@@ -1,0 +1,56 @@
+https://www.r-project.org/
+https://cran.r-project.org/src/base/R-3/
+--prefix=/app/sinova/R
+./configure  --with-readline=yes --with-libpng=yes --with-x=no LDFLAGS="-L/usr/local/lib" CPPFLAGS="-I /usr/local/include/"
+
+
+error: zlib library and headers are required
+bzip2 library and headers are required
+
+wget http://www.bzip.org/1.0.6/bzip2-1.0.6.tar.gz
+make -f Makefile-libbz2_so
+make && sudo make install
+
+liblzma library and headers are required
+https://sourceforge.net/projects/lzmautils/files/xz-5.2.3.tar.gz/download
+wget http://tukaani.org/xz/xz-5.2.2.tar.gz
+make && sudo make install
+error: pcre >= 8.20 library and headers are required
+ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.38.tar.gz
+wget ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.38.tar.gz
+tar xzvf pcre-8.38.tar.gz
+./configure --enable-utf8
+make -j3 && sudo make install
+
+wget --no-check-certificate https://curl.haxx.se/download/curl-.47.1.tar.gz
+wget --no-check-certificate https://curl.haxx.se/download/curl-7.55.1.tar.gz
+tar xzvf curl-7.47.1.tar.gz
+cd curl-7.47.1
+./configure
+make -j3 && sudo make install
+
+
+http://kuxingseng2016.blog.51cto.com/1374617/1846326
+http://blog.sina.com.cn/s/blog_6ac25ea00102whkc.html
+
+install.packages("stringi_1.1.5.tar.gz",
+                 repos = NULL,
+                 type = "source",
+                 configure.vars="ICUDT_DIR=/app/sinova/icudt/")
+evaluate_0.10.1.tar.gz
+
+
+install.packages("evaluate_0.10.1.tar.gz",
+				repos = NULL,
+				type = "source")
+
+zeppelin 运行spark r错误:
+java.lang.NoSuchMethodError: org.jsoup.select.Elements.get(I)Lorg/jsoup/nodes/Element;
+参考:
+https://issues.apache.org/jira/browse/ZEPPELIN-941
+https://github.com/apache/zeppelin/pull/949
+pr:
+rm lib/interpreter/jsoup-1.6.1.jar
+wget http://central.maven.org/maven2/org/jsoup/jsoup/1.8.1/jsoup-1.8.1.jar
+mv jsoup-1.8.1.jar lib/interpreter/
+
