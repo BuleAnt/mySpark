@@ -1,6 +1,10 @@
 http://blog.csdn.net/han_xiaoyang/article/details/50469334
 特征工程
 	http://www.cnblogs.com/jasonfreak/p/5448385.html
+	模型选择
+	https://bigdata-ny.github.io/2016/09/20/visual-tools-for-machine-learning-part-2
+	模型评估和参数调优
+    https://bigdata-ny.github.io/2016/10/24/visual-tools-for-machine-learning-part-3/
 	特征转换
 	http://www.cnblogs.com/jasonfreak/p/5619260.html
 	http://blog.csdn.net/leiting_imecas/article/details/54981723
@@ -14,6 +18,7 @@ http://blog.csdn.net/han_xiaoyang/article/details/50469334
 	特征选择(L1正则化)
 	http://blog.csdn.net/pipisorry/article/details/40200111
 	http://blog.csdn.net/cheng9981/article/details/71023709
+
 	spark 特征提取选择和转换
 	http://blog.csdn.net/cheng9981/article/details/63280665
 	spark (线性回归及L1、L2正则化区别与稀疏解 )

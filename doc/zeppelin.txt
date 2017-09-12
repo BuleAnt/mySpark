@@ -53,3 +53,21 @@ mvn clean package -DskipTests -Dcobertura.skip=true -Pspark-2.1 -Phadoop-2.4 -Pp
 -Phadoop-2.4
 -Phadoop-2.6
 -Phadoop-2.7
+
+## spark其他设置
+--executor-memory 8g \
+--executor-cores 4 \
+--conf spark.dynamicAllocation.enabled=true \
+--conf spark.dynamicAllocation.minExecutors=5 \
+--conf spark.dynamicAllocation.maxExecutors=60 \
+--conf spark.dynamicAllocation.initialExecutors=10 \
+--conf spark.dynamicAllocation.schedulerBacklogTimeout=1 \
+--conf spark.dynamicAllocation.sustainedSchedulerBacklogTimeout=5s \
+--conf spark.dynamicAllocation.executorIdleTimeout=200s \
+--conf spark.dynamicAllocation.cachedExecutorIdleTimeout=600s \
+--conf spark.yarn.executor.memoryOverhead=2G \
+--conf spark.yarn.am.memoryOverhead=2g \
+--conf spark.yarn.am.cores=4 \
+--conf spark.yarn.am.memory=8g \
+--conf spark.yarn.queue=spark \
+--conf spark.yarn.executor.failuresValidityInterval=20m

@@ -6,11 +6,9 @@ https://cran.r-project.org/src/base/R-3/
 
 error: zlib library and headers are required
 bzip2 library and headers are required
-
 wget http://www.bzip.org/1.0.6/bzip2-1.0.6.tar.gz
 make -f Makefile-libbz2_so
 make && sudo make install
-
 liblzma library and headers are required
 https://sourceforge.net/projects/lzmautils/files/xz-5.2.3.tar.gz/download
 wget http://tukaani.org/xz/xz-5.2.2.tar.gz
@@ -21,7 +19,6 @@ wget ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.38.tar.gz
 tar xzvf pcre-8.38.tar.gz
 ./configure --enable-utf8
 make -j3 && sudo make install
-
 wget --no-check-certificate https://curl.haxx.se/download/curl-.47.1.tar.gz
 wget --no-check-certificate https://curl.haxx.se/download/curl-7.55.1.tar.gz
 tar xzvf curl-7.47.1.tar.gz

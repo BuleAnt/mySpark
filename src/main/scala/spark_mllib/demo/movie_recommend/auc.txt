@@ -1,0 +1,34 @@
+TP —— True Positive （真正, TP）被模型预测为正的正样本；可以称作判断为真的正确率
+TN —— True Negative（真负 , TN）被模型预测为负的负样本 ；可以称作判断为假的正确率
+FP ——False Positive （假正, FP）被模型预测为正的负样本；可以称作误报率
+FN——False Negative（假负 , FN）被模型预测为负的正样本；可以称作漏报率
+True Positive Rate（真正率 , TPR）或灵敏度（sensitivity）
+　　TPR = TP /（TP + FN）
+　　正样本预测结果数 / 正样本实际数
+
+True Negative Rate（真负率 , TNR）或特指度（specificity）
+　　TNR = TN /（TN + FP）
+　　负样本预测结果数 / 负样本实际数
+
+False Positive Rate （假正率, FPR）
+　　FPR = FP /（FP + TN）
+　　被预测为正的负样本结果数 /负样本实际数
+
+False Negative Rate（假负率 , FNR）
+　　FNR = FN /（TP + FN）
+　　被预测为负的正样本结果数 / 正样本实际数
+
+Prositive/Negative:
+	样本中被预测为正和负的样本
+T/F:真假,表示正确/错误的预测
+
+TPR:表示TP(真正与所有的正样本)的比例
+FPR:表示FP(假正与所有负样本)的比例
+
+ROC:以TPR为x轴,以FPR为y轴,曲线的每个点表示对每个用户是否点击的预测事件,是一条曲线
+	x,y轴值分布都在0到1之间,
+AUC:ROC的下方面积,用于预测好差的量化
+
+
+
+随机预测的ROC对应的AUC为0.5

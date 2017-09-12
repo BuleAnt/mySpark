@@ -1,0 +1,8 @@
+select pack_type,mob,arpu
+from t_bigdata_mon_all
+where pack_id in ('90166048')
+and mon='201705'
+and net_id='4G'
+and arpu>'0.0'
+and user_name not in ('测试')
+group by pack_type,mob,arpu
