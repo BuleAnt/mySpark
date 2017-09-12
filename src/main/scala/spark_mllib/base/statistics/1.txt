@@ -16,7 +16,6 @@
 卡方分布
 
 
-
 交叉熵代价函数 方差代价函数
 http://blog.csdn.net/mydear_11000/article/details/51654780
 
