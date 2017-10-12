@@ -2,6 +2,12 @@ package spark_mllib.book_wang.C03
 
 import org.apache.spark.{SparkContext, SparkConf}
 
+/**
+  * 3-14 map方法
+  * map可以对rdd数据集中数据逐个操作,他与flatmap不同之处在于,
+  * flatmap是将数据集数据桌位一个整体处理,之后对其中的数据做计算.
+  * 而map方法直接对数据集中的数据做单独处理
+  */
 object testMap {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量

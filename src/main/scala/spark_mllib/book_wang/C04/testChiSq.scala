@@ -1,3 +1,5 @@
+package spark_mllib.book_wang.C04
+
 import org.apache.spark.mllib.linalg.{Matrices, Vectors}
 import org.apache.spark.mllib.stat.Statistics
 

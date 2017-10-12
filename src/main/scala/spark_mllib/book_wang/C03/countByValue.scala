@@ -2,6 +2,11 @@ package spark_mllib.book_wang.C03
 
 import org.apache.spark.{SparkContext, SparkConf}
 
+/**
+  * 3-9 countByValue
+  * countByValue方法是计算数据集中某个数据出现的个数
+  * 并将其以map的形式返回.
+  */
 object countByValue {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量

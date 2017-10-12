@@ -1,14 +1,20 @@
 package spark_mllib.book_wang.C03
 
-import org.apache.spark.{SparkContext, SparkConf}
+import org.apache.spark.{SparkConf, SparkContext}
 
+
+/**
+  * 3-20 合并压缩zip
+  * zip方法是常用的合并压缩算法,它可以将若干个rdd压缩成一个新的rdd,
+  * 进而形成一系列的键值对存储形式的新rdd
+  */
 object testZip {
   def main(args: Array[String]) {
-   /* val conf = new SparkConf() //创建环境变量
+    val conf = new SparkConf() //创建环境变量
       .setMaster("local") //设置本地化处理
       .setAppName("testZip")
     //设定名称
-    val sc = new SparkContext(conf)*/
+    val sc = new SparkContext(conf)
     //创建环境变量实例
     val arr1 = Array(1, 2, 3, 4, 5, 6)
     //创建数据集1

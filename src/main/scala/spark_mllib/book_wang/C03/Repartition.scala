@@ -2,6 +2,10 @@ package spark_mllib.book_wang.C03
 
 import org.apache.spark.{SparkContext, SparkConf}
 
+/**
+  * 3-8 repartition方法
+  * repartition和coalesce方法类似,均将数据重新分区组合
+  */
 object Repartition {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量

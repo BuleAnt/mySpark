@@ -2,6 +2,11 @@ package spark_mllib.book_wang.C03
 
 import org.apache.spark.{SparkContext, SparkConf}
 
+/**
+  * 3-15
+  * groupBy 方法讲传入的数据进行分组,
+  * 分组的依据是作为参数传入的计算方法
+  */
 object groupBy {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量

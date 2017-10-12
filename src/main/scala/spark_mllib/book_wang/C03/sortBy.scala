@@ -2,6 +2,11 @@ package spark_mllib.book_wang.C03
 
 import org.apache.spark.{SparkContext, SparkConf}
 
+/**
+  * 3-19 sortBy
+  * 是一个常用的排序方法,主要功能是对已有的Rdd重新排序
+  * 并将重新排序后的数据生成一个新的rdd
+  */
 object sortBy {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量

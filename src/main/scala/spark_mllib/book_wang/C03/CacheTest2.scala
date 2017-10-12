@@ -2,6 +2,10 @@ package spark_mllib.book_wang.C03
 
 import org.apache.spark.{SparkContext, SparkConf}
 
+/**
+  * 3-5 采用迭代式打印数据
+  * foreach(println)
+  */
 object CacheTest2 {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量

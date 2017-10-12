@@ -2,6 +2,10 @@ package spark_mllib.book_wang.C03
 
 import org.apache.spark.{SparkContext, SparkConf}
 
+/**
+  * 3-11 distinct
+  * distinct方法作用是出去数据集中重复项
+  */
 object distinct {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量

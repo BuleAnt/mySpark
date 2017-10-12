@@ -1,0 +1,187 @@
+SIM卡换USIM卡用户匹配模型
+	4gusim_yyyymm	t_ods_bigdata_4gusim	每月9号
+	根据全网用户的终端和SIM卡信息数据分析，为业务部门确定持有4G终端、且使用SIM卡的客户，开展更换USIM卡活动。
+	90w
+
+低消费用户名单获取模型
+	lowcomsume_yyyymm	t_ods_bigdata_lowcomsume	每月9号
+	根据全网用户，在网时长6月以上，近三月平均流量大于100M，近三月平均出账收入小于60元。
+	380w
+
+本网视频偏好用户模型
+	prodlevel_yyyymm	t_ods_bigdata_prodlevel 	每月9号
+	通过对本网用户的互联网数据分析，通过用户使用app流量、使用时长等指标给用户打上偏好标签，此模型将视频偏好用户抓取出来
+	390w
+
+本网视频偏好应用分析模型
+	appprod_yyyymm	t_ods_bigdata_appprod	每月9号
+	通过对视频偏好用户分析，结合用户使用app流量、使用时长等指标得出该偏好视频用户的偏好app应用
+	1亿
+
+漫游用户匹配模型
+	traveldestination_yyyymm	t_ods_bigdata_travel	每月9号
+	通过对本网用户在旅游类APP内的搜索行为和浏览行为进行抓取，通过文本分析，得出具有国际/国内出行意向的用户，匹配漫游地
+	13w
+
+基于移网发展宽带模型
+	kuandaiwr_yyyymm	t_ods_bigdata_kuandaiwr	每月9号
+	通过用户使用流量的分布情况和基站信息数据，判断移网用户的家庭是否装宽带，提取移网用户家庭没有装宽带的用户群。
+	90w
+
+23G终端用户换机预测模型
+	zhongduanyuce_yyyymm	t_ods_bigdata_zhongduanyuce	每月15号
+	在原有模型基础上新增了用户当前使用终端品牌、型号，当前终端使用时长，换机概率字段数据
+	1800w
+
+生日关怀-套内流量
+	CMCLGB0101FAYYYYMM1000000.XXX.gz	t_ods_bigdata_birthday	每月15号
+	生日关怀-套内流量
+	1.4亿
+
+
+
+本网视频偏好用户模型
+	t_ods_bigdata_appprod
+	字段名称	字段类型	字段解释	备注
+	month_id            	string	账期
+	prov_id             	string	省份
+	user_id             	string	用户ID
+	device_number       	string	手机号码
+	imei                	string	IMEI号
+	factory_desc        	string	使用终端品牌	苹果 小米 欧珀 维沃 华为 荣耀 三星 魅族 乐视 金立 …
+	term_desc           	string	使用终端型号	A1586     A1524     A1530     A1700     OPPO R9M  VIVO X7   …
+	app_prod_pre        	string	app名称	多玩约战 乐视视频 奇奇影视 土豆视频 百度视频 天翼视讯 花样直播 …
+	label_m_total_flow  	string	视频类月度总流量
+	label_m_visit_dura  	string	视频类月度总时长
+	label_m_visit_cnt   	string	视频类月度总次数
+	mon                 	string	分区
+
+
+
+
+本网视频偏好应用分析模型
+	t_ods_bigdata_prodlevel
+	字段名称	字段类型	字段解释	备注
+	month_id       	string	账期
+	prov_id        	string	省份
+	user_id        	string	用户ID
+	device_number  	string	手机号码
+	imei           	string	IMEI号
+	factory_desc   	string	使用终端品牌
+	term_desc      	string	使用终端型号
+	prod_label_pre 	string	标签偏好	即时通信  手机视频  新闻资讯  摄影图片  社交网络  手机音频  浏览器    应用商店  搜索引擎  地图导航 …
+	app_prod_pre   	string	app名称	微信       QQ         新浪微博   今日头条   快手       UC浏览器   爱奇艺视频 手机百度   QQ音乐     网易云音乐…
+	mon            	string		分区
+
+SIM卡换USIM卡用户匹配模型
+	t_ods_bigdata_4gusim
+	字段名称	字段类型	字段解释	备注
+	month_id         	string	账期
+	prov_id          	string	省分ID
+	subs_instance_id 	string	用户ID
+	device_number    	string	电话号码
+	mon              	string		分区
+
+
+漫游用户匹配模型
+	t_ods_bigdata_travel
+	字段名称	字段类型	字段解释	备注
+	month_id           	string	月份（格式YYYYMM）
+	prov_id            	string	省份
+	day_id             	string	日期
+	user_id            	string	用户ID
+	device_number      	string	电话号码
+	country            	string	国内外标识
+	travel_destination 	string	搜索目的地
+	product_name       	string	套餐信息
+	mon                	string		分区
+
+
+生日关怀-套内流量
+	t_ods_bigdata_birthday
+	字段名称	字段类型	字段解释	备注
+	month    	账期	YYYYMM
+	pid      	省份
+	cid      	地市
+	mobile   	接入号码	剔除主副卡中副卡号码
+	birthday 	生日	月日（mmdd）
+	flow     	使用流量	出账月流量使用值（单位：M）
+	package  	套内流量	套餐赠送流量值（单位：M）
+	arpu     	ARPU值	出账收入
+	usr_type 	用户类型	cb侧用户还是B侧用户
+	mon      			分区
+
+
+
+低消费用户名单获取模型
+	t_ods_bigdata_lowcomsume
+	字段名称	字段类型	字段解释	备注
+	month_id           	string	账期
+	prov_id            	string	省份ID
+	service_type_old   	string	套餐类型	200101AA 200102AA 30AAAAAA 2002AAAA 40AAAAAA
+	user_id            	string	用户id
+	device_number      	string	电话号码
+	avg_fee            	string	近三个月平均出账
+	area_id            	string	地市	V0150200 V0150200 V0150100 V0152500 V0152700 …
+	total_flux         	string	上月使用流量
+	activity_type_desc 	string	合约类型	存话费送业务（送短信）     合约惠机终端               存话费送业务（送流量）     总部其他活动               单卡                   存费送费                  购手机送话费               存话费送业务（送语音）     订业务送手机               存费送业务（不能区分赠送业务的类型）   预付话费送手机
+	end_date           	string	合约到期时间
+	is_zhwj            	string	是否智慧沃家	是智慧沃家 否智慧沃家
+	is_zfk             	string	是否主副卡	非主副卡 是主副卡
+	service_type       	string	网络类型	20AAAAAA 30AAAAAA 90AAAAAA 40AAAAAA
+	innet_months       	string	入网时长（月）
+	onein1mon_term_imei	string	IMEI号
+	onein1mon_term_type	string	终端网别标识
+	manu_name          	string	品牌名称	苹果 小米 欧珀 维沃 华为 荣耀 三星 魅族 乐视 金立 …
+	model_name         	string	品牌型号	A1586     A1524     A1530     A1700     OPPO R9M  VIVO X7   …
+	mon                	string		分区
+
+
+23G终端用户换机预测模型
+	t_ods_bigdata_zhongduanyuce
+	字段名称	字段类型	字段解释	备注
+	month_id         	string	账期
+	prov_id          	string	省份
+	subs_instance_id 	string	用户ID
+	device_number    	string	电话号码
+	area_id          	string	地市ID
+	total_flux_3     	string	近3个月平均流量
+	acct_fee_3       	string	近3个月平均出账收入
+	innet_date       	string	入网日期
+	manu_alias       	string	当前终端品牌
+	model_name       	string	当前终端型号
+	use_term_type    	string	当前终端类型	3  3G 2G
+	his_factory_desc1	string	前一次终端品牌
+	his_term_desc1   	string	前一个终端型号
+	use_month        	string	当前终端使用时长
+	proble           	string	换机概率
+	manu_alias1      	string	推荐终端品牌TOP1
+	model_name1      	string	推荐终端型号TOP1
+	manu_alias2      	string	推荐终端品牌TOP2
+	model_name2      	string	推荐终端型号TOP2
+	manu_alias3      	string	推荐终端品牌TOP3
+	model_name3      	string	推荐终端型号TOP3
+	manu_alias4      	string	推荐终端品牌TOP4
+	model_name4      	string	推荐终端型号TOP4
+	manu_alias5      	string	推荐终端品牌TOP5
+	model_name5      	string	推荐终端型号TOP5
+	mon              	string		分区
+
+
+基于移网发展宽带模型
+	t_ods_bigdata_kuandaiwr
+	字段名称	字段类型	字段解释	备注
+	month_id           	string 	账期
+	prov_id            	string 	省份
+	user_id            	string 	用户ID
+	device_number      	string 	电话号码
+	onein1mon_term_imei	string 	Imei号
+	longitude          	string 	经度
+	latitude           	string 	纬度
+	cell_name          	string 	基站名称
+	service_type       	string 	业务类型 : 	20AAAAAA 30AAAAAA 90AAAAAA 40AAAAAA
+	product_class_desc 	string 	套餐名称
+	activity_type_desc 	string 	合约类型	存话费送业务（送短信）     合约惠机终端               存话费送业务（送流量）     总部其他活动               单卡                   存费送费                  购手机送话费               存话费送业务（送语音）     订业务送手机               存费送业务（不能区分赠送业务的类型）   预付话费送手机
+	mon                	string 		分区
+
+

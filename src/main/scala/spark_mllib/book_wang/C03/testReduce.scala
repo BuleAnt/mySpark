@@ -2,6 +2,10 @@ package spark_mllib.book_wang.C03
 
 import org.apache.spark.{SparkContext, SparkConf}
 
+/**
+  * 3-17 reduce方法
+  * reduce与map不同的是,它在处理数据时需要两个参数
+  */
 object testReduce {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量

@@ -1,5 +1,11 @@
+package spark_mllib.book_wang.C03
+
 import org.apache.spark.{SparkContext, SparkConf}
 
+/**
+  * 3-6 笛卡尔积操作 cartesian 方法
+  * 要求数据集的长度必须相同,结果为一个新的数据集返回
+  */
 object cartesian {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量

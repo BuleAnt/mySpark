@@ -2,6 +2,10 @@ package spark_mllib.book_wang.C03
 
 import org.apache.spark.{SparkContext, SparkConf}
 
+/**
+  * 3-12 filter
+  * filter 用来对数据进行过滤
+  */
 object filter {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量

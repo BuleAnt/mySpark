@@ -2,6 +2,12 @@ package spark_mllib.book_wang.C03
 
 import org.apache.spark.{SparkContext, SparkConf}
 
+/**
+  * 3-2 parallelize
+  * parallelize是sparkContext内部方法,将数据并行化
+  * 默认第二个参数为1 ,修改testRDDMethod中的parallelize并行度为2
+  * 可以看到运行结果
+  */
 object testRDDMethod2 {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量

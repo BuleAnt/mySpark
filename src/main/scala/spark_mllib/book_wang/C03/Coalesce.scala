@@ -2,6 +2,11 @@ package spark_mllib.book_wang.C03
 
 import org.apache.spark.{SparkContext, SparkConf}
 
+/**
+  * 3-7 分片存储 coalesce 方法
+  * coalesce 方法将已经存储的数据重新分片后在进行存储
+  * 源码第一个参数是将数据重新分成的片数,布尔参数指的是将数据分成更小的片时使用
+  */
 object Coalesce {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量

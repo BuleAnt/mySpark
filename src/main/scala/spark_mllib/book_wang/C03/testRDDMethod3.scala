@@ -2,6 +2,9 @@ package spark_mllib.book_wang.C03
 
 import org.apache.spark.{SparkContext, SparkConf}
 
+/** 3-3
+  * aggregate方法用于字符串
+  */
 object testRDDMethod3 {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量

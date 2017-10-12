@@ -2,6 +2,10 @@ package spark_mllib.book_wang.C03
 
 import org.apache.spark.{SparkContext, SparkConf}
 
+/**
+  * 3-13 flatMap方法
+  * 对rdd数据集进行整体操作的特殊方法,返回一个整体数据集
+  */
 object flatMap {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量
