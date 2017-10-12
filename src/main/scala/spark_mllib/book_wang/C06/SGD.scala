@@ -1,5 +1,10 @@
+package spark_mllib.book_wang.C06
+
 import scala.collection.mutable.HashMap
 
+/**
+  * 6-1 随机梯度下降法
+  */
 object SGD {
   val data = HashMap[Int, Int]()
 
@@ -12,9 +17,8 @@ object SGD {
     }
     data //返回数据集
   }
-
-  var θ: Double = 0
   //第一步假设θ为0
+  var θ: Double = 0
   var α: Double = 0.1 //设置步进系数
 
   def sgd(x: Double, y: Double) = {

@@ -1,7 +1,12 @@
+package spark_mllib.book_wang.C05
+
 import org.apache.spark.{SparkConf, SparkContext}
 import scala.collection.mutable.Map
 
 
+/**
+  * 5-1 基于余弦相似度的用户相似度计算
+  */
 object CollaborativeFilteringSpark {
   val conf = new SparkConf().setMaster("local").setAppName("CollaborativeFilteringSpark ")
   //设置环境变量
@@ -33,22 +38,22 @@ object CollaborativeFilteringSpark {
 
   //两两计算分值,采用余弦相似性
   def getCollaborateSource(user1: String, user2: String): Double = {
-    val user1FilmSource = source.get(user1).get.values.toVector
     //获得第1个用户的评分
-    val user2FilmSource = source.get(user2).get.values.toVector
+    val user1FilmSource = source.get(user1).get.values.toVector
     //获得第2个用户的评分
-    val member = user1FilmSource.zip(user2FilmSource).map(d => d._1 * d._2).reduce(_ + _).toDouble
+    val user2FilmSource = source.get(user2).get.values.toVector
     //对公式分子部分进行计算
+    val member = user1FilmSource.zip(user2FilmSource).map(d => d._1 * d._2).reduce(_ + _).toDouble
+    //求出分母第1个变量值
     val temp1 = math.sqrt(user1FilmSource.map(num => {
-      //求出分母第1个变量值
       math.pow(num, 2) //数学计算
+      //进行叠加
     }).reduce(_ + _))
-    //进行叠加
+
+    //求出分母第2个变量值
     val temp2 = math.sqrt(user2FilmSource.map(num => {
-      ////求出分母第2个变量值
       math.pow(num, 2) //数学计算
-    }).reduce(_ + _))
-    //进行叠加
+    }).reduce(_ + _)) //进行叠加
     val denominator = temp1 * temp2 //求出分母
     member / denominator //进行计算
   }

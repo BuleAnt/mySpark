@@ -18,6 +18,6 @@ object irisLinearRegression {
   }.cache()
   //加载数据
   val model = LinearRegressionWithSGD.train(parsedData, 10, 0.1) //创建模型
-  println("回归公式为: y.txt = " + model.weights + " * x + " + model.intercept) //打印回归公式
+  println("回归公式为: y = " + model.weights + " * x + " + model.intercept) //打印回归公式
 
 }

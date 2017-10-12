@@ -14,7 +14,7 @@ object irisCorrect {
       .flatMap(_.split(' ') //进行分割
       .map(_.toDouble))
     //转化为Double类型
-    val dataY = sc.textFile("c://y.txt.txt") //读取数据
+    val dataY = sc.textFile("c://y.txt") //读取数据
       .flatMap(_.split(' ') //进行分割
       .map(_.toDouble))
     //转化为Double类型
