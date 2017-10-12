@@ -57,7 +57,7 @@ object TopNBasic {
 			val myTable = conn.getTable(TableName.valueOf(tableName))
 			x.foreach(y => {
 				val p = new Put(Bytes.toBytes(y._1))
-				//p.addColumn(Bytes.toBytes("col"), Bytes.toBytes("key"), Bytes.toBytes(y._2))
+				//p.addColumn(Bytes.toBytes("col"), Bytes.toBytes("key"), Bytes.toBytes(y.txt._2))
 				//myTable.put(p)
 			})
 			myTable.close()

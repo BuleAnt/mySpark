@@ -108,7 +108,7 @@ object ItemSimilarity {
 
   /**
     * 余弦相似度矩阵计算.
-    * T(x,y) = ∑x(i)y(i) / sqrt(∑(x(i)*x(i)) * ∑(y(i)*y(i)))
+    * T(x,y.txt) = ∑x(i)y.txt(i) / sqrt(∑(x(i)*x(i)) * ∑(y.txt(i)*y.txt(i)))
     *
     * @param user_rdd 用户评分
     * @return RDD[ItemSimi] 返回物品相似度
@@ -141,8 +141,8 @@ object ItemSimilarity {
 
   /**
     * 欧氏距离相似度矩阵计算.
-    * d(x, y) = sqrt(∑((x(i)-y(i)) * (x(i)-y(i))))
-    * sim(x, y) = n / (1 + d(x, y))
+    * d(x, y.txt) = sqrt(∑((x(i)-y.txt(i)) * (x(i)-y.txt(i))))
+    * sim(x, y.txt) = n / (1 + d(x, y.txt))
     *
     * @param user_rdd 用户评分
     * @return RDD[ItemSimi] 返回物品相似度

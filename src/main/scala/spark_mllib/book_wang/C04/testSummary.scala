@@ -1,7 +1,13 @@
+package spark_mllib.book_wang.C04
+
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.stat.Statistics
 import org.apache.spark.{SparkConf, SparkContext}
 
+/**
+  * 4-8 求数据的均值和标准差
+  * colStats是Statistics类计算统计量的方法,其工作和计算是以列为基础进行计算的
+  */
 object testSummary {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量
@@ -10,7 +16,7 @@ object testSummary {
     //设定名称
     val sc = new SparkContext(conf)
     //创建环境变量实例
-    val rdd = sc.textFile("c://2LinearRegression.txt") //创建RDD文件路径
+    val rdd = sc.textFile("c://b.txt") //创建RDD文件路径
       .map(_.split(' ') //按“ ”分割
       .map(_.toDouble)) //转成Double类型
       .map(line => Vectors.dense(line))

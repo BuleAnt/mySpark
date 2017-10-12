@@ -11,7 +11,7 @@ val conf = new SparkConf()                                     //创建环境变
     val dataX = sc.textFile("c://x.txt")                                //读取数据
         .flatMap(_.split(' ')                                         //进行分割
         .map(_.toDouble))                                         //转化为Double类型
-    val dataY = sc.textFile("c://y.txt")                                 //读取数据
+    val dataY = sc.textFile("c://y.txt.txt")                                 //读取数据
       .flatMap(_.split(' ')                                            //进行分割
       .map(_.toDouble))                                           //转化为Double类型
     val correlation: Double = Statistics.corr(dataX, dataY)         //计算不同数据之间的相关系数

@@ -649,7 +649,7 @@ object NeuralNet extends Serializable {
 
     // error and loss
     // 输出误差计算
-    // nn.e = y - nn.a{n};
+    // nn.e = y.txt - nn.a{n};
     // val nn_e = batch_y - nnan
     val train_data4 = train_data3.map { f =>
       val batch_y = f._1.label
@@ -707,7 +707,7 @@ object NeuralNet extends Serializable {
             bc_config: org.apache.spark.broadcast.Broadcast[NNConfig],
             bc_nn_W: org.apache.spark.broadcast.Broadcast[Array[BDM[Double]]],
             bc_nn_p: org.apache.spark.broadcast.Broadcast[Array[BDM[Double]]]): Array[BDM[Double]] = {
-    // 第n层偏导数：d(n)=-(y-a(n))*f'(z)，sigmoid函数f'(z)表达式:f'(z)=f(z)*[1-f(z)]
+    // 第n层偏导数：d(n)=-(y.txt-a(n))*f'(z)，sigmoid函数f'(z)表达式:f'(z)=f(z)*[1-f(z)]
     // sigm: d{n} = - nn.e .* (nn.a{n} .* (1 - nn.a{n}));
     // {'softmax','linear'}: d{n} = - nn.e;
     val train_data5 = train_nnff.map { f =>
