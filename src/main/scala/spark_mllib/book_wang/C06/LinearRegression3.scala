@@ -1,7 +1,12 @@
+package spark_mllib.book_wang.C06
+
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression.{LabeledPoint, LinearRegressionWithSGD}
 import org.apache.spark.{SparkConf, SparkContext}
 
+/**
+  * 6-3 MSE对拟合曲线验证
+  */
 object LinearRegression3 {
   val conf = new SparkConf() //创建环境变量
     .setMaster("local") //设置本地化处理
