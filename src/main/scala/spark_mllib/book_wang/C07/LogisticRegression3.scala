@@ -1,9 +1,16 @@
+package spark_mllib.book_wang.C07
+
 import org.apache.spark.mllib.classification.LogisticRegressionWithSGD
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
 
+/**
+  * 7-3 逻辑回归验证
+  * MulticlassMetrics 类是对数据进行分类的类,
+  * 通过precision方法可以对数据进行验证
+  */
 object LogisticRegression3 {
   val conf = new SparkConf() //创建环境变量
     .setMaster("local") //设置本地化处理
@@ -12,7 +19,7 @@ object LogisticRegression3 {
   val sc = new SparkContext(conf) //创建环境变量实例
 
   def main(args: Array[String]) {
-    val data = MLUtils.loadLibSVMFile(sc, "c://sample_libsvm_data.txt")
+    val data = MLUtils.loadLibSVMFile(sc, "data/sample_libsvm_data.txt")
     //读取数据集
     val splits = data.randomSplit(Array(0.6, 0.4), seed = 11L)
     //对数据集切分

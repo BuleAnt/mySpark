@@ -1,8 +1,14 @@
+package spark_mllib.book_wang.C07
+
 import org.apache.spark.mllib.classification.SVMWithSGD
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.{SparkConf, SparkContext}
 
+/**
+  *  7-5 支持向量机
+  *
+  */
 object SVM {
   def main(args: Array[String]) {
     val conf = new SparkConf() //创建环境变量
@@ -11,7 +17,7 @@ object SVM {
     //设定名称
     val sc = new SparkContext(conf)
     //创建环境变量实例
-    val data = sc.textFile("c:/u.txt")
+    val data = sc.textFile("data/u.txt")
     //获取数据集路径
     val parsedData = data.map { line => //开始对数据集处理
       val parts = line.split('|')

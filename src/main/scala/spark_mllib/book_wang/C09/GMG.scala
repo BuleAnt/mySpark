@@ -1,7 +1,15 @@
+package spark_mllib.book_wang.C09
+
 import org.apache.spark.mllib.clustering.GaussianMixture
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.{SparkConf, SparkContext}
 
+/**
+  * 9-2 MLlib 高斯混合模型
+  *
+  * new GaussianMixture().setK(2) 用于设置训练模型的分类数,
+  * 可以在打印机锅中看到模型被分成两个聚类结果.
+  */
 object GMG {
   def main(args: Array[String]) {
 
@@ -9,7 +17,7 @@ val conf = new SparkConf()                                     //创建环境变
 .setMaster("local")                                             //设置本地化处理
 .setAppName("GMG ")                              			//设定名称
     val sc = new SparkContext(conf)                                 //创建环境变量实例
-    val data = sc.textFile("c://gmg.txt")							//输入数个
+    val data = sc.textFile("data/gmg.txt")							//输入数个
 val parsedData = data.map(s => Vectors.dense(s.trim.split(' ')		//转化数据格式
 .map(_.toDouble))).cache()
     val model = new GaussianMixture().setK(2).run(parsedData)		//训练模型

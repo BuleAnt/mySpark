@@ -1,3 +1,5 @@
+package spark_mllib.book_wang.C07
+
 import org.apache.spark.mllib.classification. SVMWithSGD
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
 import org.apache.spark.mllib.linalg.Vectors
@@ -5,7 +7,10 @@ import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.{SparkContext, SparkConf}
 
-object GastriCcancer {
+/**
+  * 7-6 使用支持向量机分析胃癌转移
+  */
+object GastriCcancerSVM {
   def main(args: Array[String]) {
 val conf = new SparkConf()                                     //创建环境变量
 .setMaster("local")                                             //设置本地化处理

@@ -1,22 +1,31 @@
+package spark_mllib.book_wang.C11
+
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.{SparkConf, SparkContext}
 
+/**
+  * 11-2 主成分分析
+  * Principal Component Analysis 是指讲多个变量通过现行变换以选出较少数重要变量的一种多远统计分析方法,
+  * 又称主成分分析.
+  * MLlib的PCA算法与SVD类似,同样建立在行矩阵智商的数据处理方法
+  */
 object PCA {
   def main(args: Array[String]) {
-val conf = new SparkConf()                                   	//创建环境变量
-.setMaster("local")                                             //设置本地化处理
-.setAppName("PCA ")                                    		//设定名称
-val sc = new SparkContext(conf)                                 //创建环境变量实例
+    val conf = new SparkConf()
+      .setMaster("local")
+      .setAppName("PCA ")
+    val sc = new SparkContext(conf)
 
-    val data = sc.textFile("c://2LinearRegression.txt")                                   //创建RDD文件路径
-      .map(_.split(' ')                                               //按“ ”分割
-      .map(_.toDouble))                                            //转成Double类型
-      .map(line => Vectors.dense(line))                               //转成Vector格式
-    val rm = new RowMatrix(data)                                    //读入行矩阵
-    
-val pc = rm.computePrincipalComponents(3)				//提取主成分，设置主成分个数
-    val mx = rm.multiply(pc)									//创建主成分矩阵
-    mx.rows.foreach(println)									//打印结果
+    val data = sc.textFile("data/11.txt")
+      .map(_.split(' ')
+        .map(_.toDouble))
+      .map(line => Vectors.dense(line))
+    val rm = new RowMatrix(data)
+    //提取主成分，设置主成分个数
+    val pc = rm.computePrincipalComponents(3)
+    //创建主成分矩阵
+    val mx = rm.multiply(pc)
+    mx.rows.foreach(println)
   }
 }
