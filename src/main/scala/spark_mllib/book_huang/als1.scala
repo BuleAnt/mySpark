@@ -2,7 +2,6 @@ package spark_mllib.book_huang
 
 import org.apache.log4j.{ Level, Logger }
 import org.apache.spark.{ SparkConf, SparkContext }
-import org.apache.spark.rdd.RDD
 import org.apache.spark.mllib.recommendation.ALS
 import org.apache.spark.mllib.recommendation.MatrixFactorizationModel
 import org.apache.spark.mllib.recommendation.Rating

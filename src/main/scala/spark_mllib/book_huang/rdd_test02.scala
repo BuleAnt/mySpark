@@ -20,7 +20,7 @@ object rdd_test02 {
 
     // 2.2节
     // 2.2.1 列统计汇总
-    val data_path = "/home/huangmeiling/sample_stat.txt"
+    val data_path = "data/sample_stat.txt"
     val data = sc.textFile(data_path).map(_.split("\t")).map(f => f.map(f => f.toDouble))
     val data1 = data.map(f => Vectors.dense(f))
     val stat1 = Statistics.colStats(data1)

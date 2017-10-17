@@ -12,14 +12,14 @@ object bressze_test01 {
 
   def main(args: Array[String]): Unit = {
 
-    /*val conf = new SparkConf().setAppName("breeze_test01")
+    val conf = new SparkConf().setMaster("local")setAppName("breeze_test01")
     val sc = new SparkContext(conf)
     Logger.getRootLogger.setLevel(Level.WARN)
 
     // 3.11 breeze 创建函数
     val m1 = DenseMatrix.zeros[Double](2, 3) // 2行3列0矩阵
     val v1 = DenseVector.zeros[Double](3) // 长度为3的0向量
-    val v2 = DenseVector.ones(3) // 长度为3,元素为1的向量
+    val v2 = DenseVector.ones[Double](3) // 长度为3,元素为1的向量
     val v3 = DenseVector.fill(3) { // 长度3的元素全部为5.0的向量
       5.0
     }
@@ -85,10 +85,10 @@ object bressze_test01 {
     val m_3 = DenseMatrix((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0))
     lowerTriangular(m_3) // 上三角
     upperTriangular(m_3) // 下三角
-    m_3.copy // 复制一个矩阵
+    val m_3copy = m_3.copy // 复制一个矩阵
     diag(m_3) // 对角矩阵
-    m(::, 2) := 5.0 // 第3列全部赋值为5.0
-    m(1 to 2, 1 to 2) := 5.0 // 2到3行,2到3列赋值
+    m_3(::, 2) := 5.0 // 第3列全部赋值为5.0
+    m_3(1 to 2, 1 to 2) := 5.0 // 2到3行,2到3列赋值
 
     val a_1 = DenseVector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
     a_1(1 to 4) := 5 // 2到5的元素赋值为5
@@ -155,6 +155,6 @@ object bressze_test01 {
     ceil(a_7) // 小数进1
     floor(a_7) // 小数略为0
     signum(a_7) // 符号函数
-    abs(a_7) // 绝对值*/
+    abs(a_7) // 绝对值
   }
 }
