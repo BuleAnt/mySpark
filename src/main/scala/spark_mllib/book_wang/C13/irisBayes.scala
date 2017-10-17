@@ -21,12 +21,11 @@ object irisBayes {
     val data = sc.textFile("data/iris.txt").map {
       line =>
         val parts = line.split('\t')
-        val label = parts(parts.length - 1) match {
+        val label = (parts(parts.length - 1) match {
           case "Iris-setosa" => 0
           case "Iris-versicolor" => 1
           case "Iris-virginica" => 2
-        }
-
+        }).toDouble
         val features = Vectors.dense(parts.slice(0, parts.length - 1).map(_.toDouble))
         LabeledPoint(label, features)
     }
