@@ -1,3 +1,5 @@
+package spark_mllib.book_huang
+
 import org.apache.log4j.{ Level, Logger }
 import org.apache.spark.{ SparkConf, SparkContext }
 import org.apache.spark.mllib.classification.{ LogisticRegressionWithLBFGS, LogisticRegressionModel }
@@ -6,6 +8,10 @@ import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.util.MLUtils
 
+/**
+  * 介绍一篇很详细的文章
+  * http://blog.csdn.net/lookqlp/article/details/51161640
+  */
 object logistic_regression {
 
   def main(args: Array[String]) {
@@ -15,7 +21,7 @@ object logistic_regression {
     Logger.getRootLogger.setLevel(Level.WARN)
 
     // 读取样本数据1，格式为LIBSVM format
-    val data = MLUtils.loadLibSVMFile(sc, "hdfs://192.168.180.79:9000/user/huangmeiling/sample_libsvm_data.txt")
+    val data = MLUtils.loadLibSVMFile(sc, "dadta/sample_libsvm_data.txt")
 
     //样本数据划分训练样本与测试样本
     val splits = data.randomSplit(Array(0.6, 0.4), seed = 11L)
@@ -47,7 +53,7 @@ object logistic_regression {
     println("Precision = " + precision)
 
     //保存模型
-    val ModelPath = "/user/huangmeiling/logistic_regression_model"
+    val ModelPath = "data/logistic_regression_model"
     model.save(sc, ModelPath)
     val sameModel = LogisticRegressionModel.load(sc, ModelPath)
 
