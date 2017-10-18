@@ -11,6 +11,9 @@ import org.apache.spark.mllib.util.KMeansDataGenerator
 import org.apache.spark.mllib.util.LinearDataGenerator
 import org.apache.spark.mllib.util.LogisticRegressionDataGenerator
 
+/**
+  * 2 rdd操作练习2
+  */
 object rdd_test02 {
 
   def main(args: Array[String]) {

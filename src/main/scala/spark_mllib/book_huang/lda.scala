@@ -17,7 +17,7 @@ object lda {
     //1 加载数据，返回的数据格式为：documents: RDD[(Long, Vector)]
     // 其中：Long为文章ID，Vector为文章分词后的词向量
     // 可以读取指定目录下的数据，通过分词以及数据格式的转换，转换成RDD[(Long, Vector)]即可
-    val data = sc.textFile("/home/jb-huangmeiling/sample_lda_data.txt")
+    val data = sc.textFile("data/sample_lda_data.txt")
     val parsedData = data.map(s => Vectors.dense(s.trim.split(' ').map(_.toDouble)))
     // Index documents with unique IDs
     val corpus = parsedData.zipWithIndex.map(_.swap).cache()

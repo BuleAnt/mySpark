@@ -1,23 +1,28 @@
 package spark_mllib.book_huang
 
-import org.apache.log4j.{ Level, Logger }
-import org.apache.spark.{ SparkConf, SparkContext }
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.mllib.regression.LinearRegressionWithSGD
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression.LinearRegressionModel
 
+/**
+  * 4 线性回归算法
+  * 使用随机梯度下降法
+  *
+  */
 object LinearRegression {
 
   def main(args: Array[String]) {
     // 构建Spark对象
-    val conf = new SparkConf().setAppName("LinearRegressionWithSGD")
+    val conf = new SparkConf().setMaster("local") setAppName ("LinearRegressionWithSGD")
     val sc = new SparkContext(conf)
     Logger.getRootLogger.setLevel(Level.WARN)
 
     //读取样本数据
-    val data_path1 = "/home/jb-huangmeiling/lpsa.data"
+    val data_path1 = "data/lpsa.data"
     val data = sc.textFile(data_path1)
     val examples = data.map { line =>
       val parts = line.split(',')
@@ -51,7 +56,7 @@ object LinearRegression {
     println(s"Test RMSE = $rmse.")
 
     // 模型保存
-    val ModelPath = "/user/huangmeiling/LinearRegressionModel"
+    val ModelPath = "data/LinearRegressionModel"
     model.save(sc, ModelPath)
     val sameModel = LinearRegressionModel.load(sc, ModelPath)
 

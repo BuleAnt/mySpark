@@ -14,7 +14,7 @@ object Isotonic_Regression {
     Logger.getRootLogger.setLevel(Level.WARN)
 
     // 读取样本数据
-    val data = sc.textFile("/home/jb-huangmeiling/sample_isotonic_regression_data.txt")
+    val data = sc.textFile("data/sample_isotonic_regression_data.txt")
     val parsedData = data.map { line =>
       val parts = line.split(',').map(_.toDouble)
       (parts(0), parts(1), 1.0)

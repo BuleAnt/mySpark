@@ -1,7 +1,7 @@
 package spark_mllib.book_huang
 
 /**
-  * Created by noah on 17-8-4.
+  * 1 rdd操作练习1
   */
 import org.apache.log4j.{ Level, Logger }
 import org.apache.spark.{ SparkConf, SparkContext }

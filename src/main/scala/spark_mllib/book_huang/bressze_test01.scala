@@ -6,7 +6,14 @@ import breeze.numerics._
 import org.apache.spark.{SparkConf, SparkContext}
 
 /**
-  * Created by noah on 17-8-4.
+  * 3 矩阵操作
+  *  3.11 breeze 创建函数
+  *  3.1.2 Breeze 元素访问以及操作函数
+  *  3.1.3 Breeze 数值计算函数
+  *  3.1.4 Breeze 求和函数
+  *  3.1.5 Breeze 布尔函数
+  *  3.1.6 Breeze 线性代数函数
+  *  3.1.7 Breeze 取整函数
   */
 object bressze_test01 {
 

@@ -2,6 +2,9 @@
 http://blog.csdn.net/sunbow0/article/category/2779609
 http://pan.baidu.com/s/1c1J8ZN6
 
+学习建议
+从github上clone下来spark源码,单独打开mllib模块,学习源码,
+根据书籍内容可以自行翻译和添加注释,方便后期自己回顾,可参考本人修改注释的spark mllib
 
 csdn spark mllib源码学习
 http://blog.csdn.net/zbc1090549839/article/category/6174047/1

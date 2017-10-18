@@ -15,7 +15,7 @@ object KMeans {
     Logger.getRootLogger.setLevel(Level.WARN)
 
     // 读取样本数据1，格式为LIBSVM format
-    val data = sc.textFile("/home/jb-huangmeiling/sample_kmeans_data.txt")
+    val data = sc.textFile("data/sample_kmeans_data.txt")
     val parsedData = data.map(s => Vectors.dense(s.split('\t').map(_.toDouble))).cache()
 
     // 新建KMeans聚类模型，并训练
