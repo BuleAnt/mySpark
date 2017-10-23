@@ -206,11 +206,15 @@ http://www.cnblogs.com/LeftNotEasy/archive/2011/01/02/machine-learning-boosting-
 http://www.cnblogs.com/LeftNotEasy/archive/2011/03/07/random-forest-and-gbdt.html
 集成学习(ensemble learning) boosting算法+bagging算法
 http://www.cnblogs.com/pinard/p/6131423.html
+
 集成学习Adaboost提升算法
-http://blog.csdn.net/v_july_v/article/details/40718799
-http://blog.csdn.net/u014688145/article/details/55657501
-http://www.cnblogs.com/pinard/p/6133937.html
+	http://blog.csdn.net/v_july_v/article/details/40718799
+	(adaboost解释的很清晰)
+	http://blog.csdn.net/u014688145/article/details/55657501
+	(总结的很好)
+	http://www.cnblogs.com/pinard/p/6133937.html
 GBDT梯度提升树
+	http://blog.csdn.net/suranxu007/article/details/49910525
 	http://www.cnblogs.com/pinard/p/6140514.html
 	http://blog.csdn.net/w28971023/article/details/8133929
 	模型组合(Model Combining)之Boosting与Gradient Boosting

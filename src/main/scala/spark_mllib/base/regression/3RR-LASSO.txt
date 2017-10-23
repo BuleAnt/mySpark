@@ -230,3 +230,5 @@ lasso算法及其实现
 http://blog.csdn.net/mousever/article/details/50513409
 Lasso回归算法： 坐标轴下降法与最小角回归法
 http://www.cnblogs.com/pinard/p/6018889.html
+特征缩减技术(shrinkage): lasso和岭回归
+http://blog.csdn.net/autoliuweijie/article/details/50285881

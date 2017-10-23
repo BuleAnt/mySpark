@@ -1,0 +1,10 @@
+http://blog.csdn.net/suranxu007/article/details/49910323
+
+Adaboost 算法
+http://blog.csdn.net/GYQJN/article/details/45501185
+http://blog.csdn.net/zxc024000/article/details/51577324
+Adaboost 算法的原理与推导
+http://blog.csdn.net/ns708865818/article/details/51426624
+http://blog.csdn.net/v_july_v/article/details/40718799
+Gradient Boosting
+
